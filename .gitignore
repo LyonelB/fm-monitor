@@ -40,3 +40,14 @@ Thumbs.db
 users.json
 start.sh
 rds_server.py
+*.backup
+*.backup2
+*.old
+*.old2
+*.db
+users.json
+start.sh
+rds_server.py
+QUICKSTART-USB.md
+USB-BOOTABLE-GUIDE.md
+usb-autoinstall.sh
