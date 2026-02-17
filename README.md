@@ -1,425 +1,229 @@
-# 📻 Système de Surveillance FM Radio
+# 📻 FM Monitor
 
-Système de surveillance et de diffusion en streaming d'une radio FM utilisant une clé RTL-SDR, avec alertes email automatiques en cas de panne.
+Système de surveillance de signal FM avec RTL-SDR sur Raspberry Pi ou mini-PC Debian.
 
-## 🎯 Fonctionnalités
-
-- ✅ **Réception FM** via clé RTL-SDR
-- 🌐 **Streaming web** - Écouter la radio depuis n'importe où
-- 📧 **Alertes email** automatiques en cas de panne
-- 📊 **Interface web** moderne et responsive
-- 📈 **Monitoring en temps réel** du niveau audio
-- 🔄 **Détection automatique** des pannes (silence, perte de signal)
-- 📱 **Compatible** Raspberry Pi et mini-PC Linux
-- ⚡ **Service systemd** pour démarrage automatique
-
-## 📋 Prérequis
-
-### Matériel
-- Raspberry Pi (3/4/5) ou mini-PC sous Linux
-- Clé RTL-SDR (RTL2832U)
-- Connexion Internet (pour les alertes email)
-- Antenne FM adaptée
-
-### Logiciels
-- Système d'exploitation : Raspberry Pi OS, Ubuntu, Debian
-- Python 3.7+
-- rtl-sdr
-- sox
-
-## 🚀 Installation
-
-### 1. Cloner ou télécharger le projet
-
-```bash
-git clone https://github.com/votre-repo/fm-monitor.git
-cd fm-monitor
-```
-
-Ou décompresser l'archive téléchargée.
-
-### 2. Brancher la clé RTL-SDR
-
-Connecter la clé RTL-SDR à un port USB de votre appareil.
-
-### 3. Exécuter le script d'installation
-
-```bash
-sudo ./install.sh
-```
-
-Ce script va :
-- Installer toutes les dépendances système
-- Configurer Python et l'environnement virtuel
-- Configurer les règles udev pour RTL-SDR
-- Créer le service systemd
-
-### 4. Tester la clé RTL-SDR
-
-```bash
-rtl_test
-```
-
-Vous devriez voir des informations sur votre clé. Appuyez sur `Ctrl+C` pour arrêter.
-
-## ⚙️ Configuration
-
-### Éditer config.json
-
-Ouvrir le fichier `config.json` et modifier les paramètres :
-
-#### 1. Fréquence FM
-
-```json
-"rtl_sdr": {
-  "frequency": "98.5M",  // Fréquence de votre radio (format: XXX.XM)
-  "sample_rate": "200k",
-  "device_index": 0,
-  "gain": "auto",
-  "ppm_error": 0
-}
-```
-
-#### 2. Paramètres audio
-
-```json
-"audio": {
-  "output_rate": "44100",
-  "channels": 1,
-  "silence_threshold": -50,      // Niveau en dB considéré comme silence
-  "silence_duration": 30,        // Durée de silence avant alerte (secondes)
-  "check_interval": 5            // Intervalle de vérification (secondes)
-}
-```
-
-#### 3. Configuration email
-
-Pour Gmail, vous devez créer un **mot de passe d'application** :
-1. Aller sur https://myaccount.google.com/security
-2. Activer la validation en deux étapes
-3. Créer un mot de passe d'application
-4. Utiliser ce mot de passe dans la configuration
-
-```json
-"email": {
-  "enabled": true,
-  "smtp_server": "smtp.gmail.com",
-  "smtp_port": 587,
-  "use_tls": true,
-  "sender_email": "votre.email@gmail.com",
-  "sender_password": "votre_mot_de_passe_application",
-  "recipient_emails": ["destinataire@example.com"],
-  "cooldown_minutes": 30  // Délai minimum entre deux alertes
-}
-```
-
-**Autres fournisseurs d'email :**
-
-- **Outlook/Hotmail** : smtp.office365.com, port 587
-- **Yahoo** : smtp.mail.yahoo.com, port 587
-- **OVH** : ssl0.ovh.net, port 587
-
-#### 4. Informations de la station
-
-```json
-"station": {
-  "name": "Ma Radio FM",
-  "frequency_display": "98.5 MHz"
-}
-```
-
-## 🎬 Démarrage
-
-### Démarrage manuel (pour tester)
-
-```bash
-source venv/bin/activate
-python3 app.py
-```
-
-Accéder à l'interface web : `http://[IP-de-votre-appareil]:5000`
-
-### Démarrage avec systemd (recommandé)
-
-```bash
-# Démarrer le service
-sudo systemctl start fm-monitor
-
-# Activer le démarrage automatique au boot
-sudo systemctl enable fm-monitor
-
-# Vérifier le statut
-sudo systemctl status fm-monitor
-
-# Voir les logs en temps réel
-sudo journalctl -u fm-monitor -f
-```
-
-### Commandes utiles
-
-```bash
-# Arrêter le service
-sudo systemctl stop fm-monitor
-
-# Redémarrer le service
-sudo systemctl restart fm-monitor
-
-# Désactiver le démarrage automatique
-sudo systemctl disable fm-monitor
-
-# Recharger la configuration après modification
-sudo systemctl daemon-reload
-sudo systemctl restart fm-monitor
-```
-
-## 🌐 Interface Web
-
-### Accès
-
-Une fois le service démarré, accéder à l'interface web :
-
-```
-http://[IP-de-votre-appareil]:5000
-```
-
-Pour trouver l'IP de votre appareil :
-
-```bash
-hostname -I
-```
-
-### Fonctionnalités de l'interface
-
-1. **Lecteur Audio** - Écouter le stream en direct
-2. **État du Signal** - Visualisation en temps réel
-3. **Niveau Audio** - Barre de niveau avec valeur en dB
-4. **Statistiques** - Uptime, alertes, etc.
-5. **Contrôles** - Démarrer/Arrêter/Redémarrer le monitoring
-6. **Test Email** - Vérifier la configuration des alertes
-
-## 📧 Système d'Alertes
-
-### Types d'alertes envoyées
-
-1. **Perte du signal FM** - Silence prolongé détecté
-2. **Rétablissement du signal** - Le signal est revenu
-
-### Exemple d'email d'alerte
-
-```
-⚠️ ALERTE - Ma Radio FM - Perte du signal FM
-
-Station: Ma Radio FM
-Fréquence: 98.5 MHz
-Type d'alerte: Perte du signal FM
-Date et heure: 09/02/2026 14:30:15
-
-Détails:
-Silence détecté depuis 35 secondes.
-Niveau audio: -62.3 dB (seuil: -50 dB)
-```
-
-### Cooldown
-
-Un système de cooldown empêche l'envoi d'alertes trop fréquentes. Par défaut, un délai de 30 minutes est appliqué entre deux alertes.
-
-## 🔧 Dépannage
-
-### La clé RTL-SDR n'est pas détectée
-
-```bash
-# Vérifier que la clé est reconnue
-lsusb | grep RTL
-
-# Tester la clé
-rtl_test
-
-# Vérifier les permissions
-ls -la /dev/bus/usb/
-```
-
-### Aucun son dans le stream
-
-1. Vérifier la fréquence dans `config.json`
-2. Tester la réception manuellement :
-
-```bash
-rtl_fm -f 98.5M -M fm -s 200k -r 48k - | aplay -r 48k -f S16_LE
-```
-
-3. Vérifier l'antenne
-
-### Les emails ne sont pas envoyés
-
-1. Vérifier les logs :
-
-```bash
-sudo journalctl -u fm-monitor -f
-```
-
-2. Tester l'envoi d'email via l'interface web (bouton "Test Email")
-
-3. Vérifier la configuration SMTP dans `config.json`
-
-4. Pour Gmail, vérifier que vous utilisez bien un mot de passe d'application
-
-### Le service ne démarre pas
-
-```bash
-# Voir les erreurs
-sudo journalctl -u fm-monitor -n 50
-
-# Vérifier la configuration
-sudo systemctl status fm-monitor
-
-# Tester manuellement
-cd /chemin/vers/fm-monitor
-source venv/bin/activate
-python3 app.py
-```
-
-### Niveau audio toujours trop faible
-
-Ajuster le gain de la clé RTL-SDR dans `config.json` :
-
-```json
-"gain": "40"  // Valeur entre 0 et 50
-```
-
-Ou laisser en mode automatique :
-
-```json
-"gain": "auto"
-```
-
-## 📊 Logs
-
-### Localisation
-
-Les logs sont stockés dans :
-- Fichier : `logs/fm-monitor.log`
-- Systemd : `journalctl -u fm-monitor`
-
-### Voir les logs en direct
-
-```bash
-# Logs du service
-sudo journalctl -u fm-monitor -f
-
-# Logs du fichier
-tail -f logs/fm-monitor.log
-```
-
-## 🔒 Sécurité
-
-### Accès distant
-
-Pour accéder au système depuis Internet :
-
-1. **Configuration du routeur** - Rediriger le port 5000 vers l'IP locale
-2. **Pare-feu** - Autoriser le port 5000
-3. **HTTPS** - Recommandé pour un accès sécurisé (utiliser nginx avec Let's Encrypt)
-
-### Mot de passe email
-
-**⚠️ IMPORTANT** : Ne jamais partager ou commiter le fichier `config.json` contenant vos identifiants email !
-
-Ajouter au `.gitignore` :
-
-```
-config.json
-logs/
-*.log
-```
-
-## 📱 Accès Mobile
-
-L'interface web est responsive et fonctionne parfaitement sur smartphone et tablette.
-
-## 🔄 Mise à jour
-
-Pour mettre à jour le système :
-
-```bash
-# Arrêter le service
-sudo systemctl stop fm-monitor
-
-# Mettre à jour les fichiers
-git pull  # ou télécharger la nouvelle version
-
-# Mettre à jour les dépendances Python
-source venv/bin/activate
-pip install -r requirements.txt --upgrade
-
-# Redémarrer le service
-sudo systemctl start fm-monitor
-```
-
-## 🛠️ Configuration Avancée
-
-### Changer le port web
-
-Dans `config.json` :
-
-```json
-"web": {
-  "host": "0.0.0.0",
-  "port": 8080  // Nouveau port
-}
-```
-
-Ne pas oublier de redémarrer le service.
-
-### Utiliser plusieurs clés RTL-SDR
-
-Modifier `device_index` dans `config.json` :
-
-```json
-"device_index": 1  // Deuxième clé
-```
-
-### Ajuster la sensibilité de détection
-
-```json
-"silence_threshold": -40,  // Plus sensible (détecte plus facilement)
-"silence_duration": 60     // Attend 60 secondes avant alerte
-```
-
-## 📄 Structure du Projet
-
-```
-fm-monitor/
-├── app.py              # Application Flask principale
-├── monitor.py          # Module de surveillance FM
-├── email_alert.py      # Gestion des alertes email
-├── config.json         # Configuration
-├── requirements.txt    # Dépendances Python
-├── install.sh          # Script d'installation
-├── README.md           # Documentation
-├── templates/
-│   └── index.html      # Interface web
-├── logs/               # Fichiers de logs
-└── venv/               # Environnement virtuel Python
-```
-
-## 🤝 Support
-
-Pour toute question ou problème :
-
-1. Vérifier les logs
-2. Consulter la section Dépannage
-3. Ouvrir une issue sur GitHub
-
-## 📜 Licence
-
-Ce projet est sous licence MIT.
-
-## 🙏 Remerciements
-
-- Projet RTL-SDR
-- Communauté Raspberry Pi
-- Flask Framework
+Surveille en continu une fréquence FM, affiche le niveau audio en temps réel, lit les données RDS, envoie des alertes email en cas de perte de signal, et propose un player audio intégré.
 
 ---
 
-**Développé avec ❤️ pour la surveillance radio FM**
+## ✨ Fonctionnalités
+
+- **VU-mètre temps réel** — 200 barres, précision 0.01 dBFS, via Server-Sent Events
+- **Player audio intégré** — écoute du flux FM directement dans le navigateur
+- **RDS** — lecture du Program Service (PS) et RadioText (RT), mode auto (toutes les 10s) ou désactivé
+- **Alertes email** — notification automatique en cas de perte de signal (seuil et durée configurables)
+- **Historique 24h** — graphique du niveau audio, stocké en SQLite
+- **Watchdog** — relance automatique de rtl_fm en cas de crash
+- **Panneau de contrôle** — activation/désactivation individuelle de chaque service depuis le dashboard
+- **Interface web** — dashboard Material Design, authentification, responsive
+
+---
+
+## 🖥️ Compatibilité
+
+| Matériel | Statut |
+|---|---|
+| Raspberry Pi 3B+ | ✅ Testé |
+| Raspberry Pi 4 | ✅ Compatible |
+| Mini-PC Debian x86_64 | ✅ Compatible |
+
+**OS recommandé :** Debian 12 (Bookworm) ou Raspberry Pi OS 64-bit
+
+---
+
+## 📦 Prérequis matériel
+
+- Clé RTL-SDR (RTL2832U)
+- Antenne FM adaptée (connecteur SMA)
+- Connexion réseau (Ethernet ou WiFi)
+
+---
+
+## 🚀 Installation rapide
+
+```bash
+git clone https://github.com/VOTRE_COMPTE/fm-monitor.git
+cd fm-monitor
+chmod +x install.sh
+sudo ./install.sh
+```
+
+L'installateur effectue automatiquement :
+1. Mise à jour du système
+2. Installation des dépendances système (`rtl-sdr`, `sox`, `redsea`, `python3-venv`)
+3. Création de l'environnement virtuel Python
+4. Installation des dépendances Python
+5. Création du fichier de configuration depuis le template
+6. Installation et démarrage du service systemd
+
+---
+
+## ⚙️ Configuration
+
+```bash
+nano config.json
+```
+
+### Paramètres principaux
+
+```json
+{
+  "station": {
+    "name": "Nom de la station",
+    "frequency": "88.6M"
+  },
+  "rtl_sdr": {
+    "frequency": "88.6M",
+    "sample_rate": "171k",
+    "gain": "45",
+    "ppm_error": "0"
+  },
+  "audio": {
+    "output_rate": "44100",
+    "silence_threshold": -30.0,
+    "silence_duration": 15
+  },
+  "email": {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "votre@gmail.com",
+    "sender_password": "votre_mot_de_passe_app",
+    "recipient_emails": ["destinataire@exemple.com"],
+    "cooldown_minutes": 30
+  }
+}
+```
+
+### Paramètres RTL-SDR
+
+| Paramètre | Description | Valeur exemple |
+|---|---|---|
+| `frequency` | Fréquence FM à surveiller | `88.6M` |
+| `gain` | Gain du tuner (0–49.6 ou `auto`) | `45` |
+| `ppm_error` | Correction d'erreur PPM de la clé | `0` |
+| `sample_rate` | Taux d'échantillonnage (**171k requis pour RDS**) | `171k` |
+
+### Email avec Gmail
+
+Pour utiliser Gmail, créez un **mot de passe d'application** :
+1. Activez la validation en 2 étapes sur votre compte Google
+2. Allez dans Compte Google → Sécurité → Mots de passe des applications
+3. Générez un mot de passe pour "Autre (nom personnalisé)"
+4. Utilisez ce mot de passe dans `sender_password`
+
+---
+
+## 🌐 Accès à l'interface
+
+Une fois installé, ouvrez dans votre navigateur :
+
+```
+http://IP_DE_LA_MACHINE:5000
+```
+
+**Identifiants par défaut :**
+- Login : `admin`
+- Mot de passe : `admin123`
+
+> ⚠️ Changez le mot de passe dès la première connexion dans `auth.py` (ligne `USERS`).
+
+---
+
+## 🎛️ Panneau de contrôle des services
+
+Depuis le dashboard, activez/désactivez chaque service individuellement :
+
+| Service | Description | Recommandé |
+|---|---|---|
+| **VU-mètre** | Calcul RMS et affichage temps réel | Selon besoin |
+| **Player Audio** | Streaming MP3 dans le navigateur | Selon besoin |
+| **Watchdog** | Relance automatique rtl_fm si crash | ✅ Toujours |
+| **RDS Auto** | Lecture PS/RT automatique toutes les 10s | Optionnel |
+| **Historique 24h** | Enregistrement SQLite des niveaux | Recommandé |
+
+> 💡 Sur Raspberry Pi 3, activez les services selon vos besoins. VU-mètre + Player Audio + Historique fonctionnent bien ensemble.
+
+---
+
+## 📁 Structure du projet
+
+```
+fm-monitor/
+├── app.py                  # Serveur Flask (routes API, SSE, streaming audio)
+├── monitor.py              # Moteur de surveillance (RTL-SDR, RMS, RDS, watchdog)
+├── database.py             # Gestion SQLite (niveaux audio, historique alertes)
+├── email_alert.py          # Envoi d'alertes email SMTP
+├── auth.py                 # Authentification sessions Flask
+├── config.json             # Configuration active (à créer depuis .example)
+├── config.json.example     # Template de configuration (sans données sensibles)
+├── requirements.txt        # Dépendances Python
+├── install.sh              # Script d'installation automatique
+├── fm-monitor.service      # Fichier service systemd
+└── templates/
+    ├── index.html          # Dashboard principal avec panneau de contrôle
+    ├── config.html         # Page de configuration
+    ├── stats.html          # Page statistiques et historique alertes
+    └── login.html          # Page de connexion
+```
+
+---
+
+## 🔧 Gestion du service
+
+```bash
+sudo systemctl start fm-monitor      # Démarrer
+sudo systemctl stop fm-monitor       # Arrêter
+sudo systemctl restart fm-monitor    # Redémarrer
+sudo systemctl status fm-monitor     # Statut
+sudo journalctl -u fm-monitor -f     # Logs en temps réel
+```
+
+---
+
+## 🔍 Dépannage
+
+**RTL-SDR non détecté**
+```bash
+lsusb | grep RTL
+rtl_test -t
+```
+
+**Pas de son dans le player**
+```bash
+ls -la /tmp/fm_stream.mp3
+# Si absent, vérifiez les logs
+sudo journalctl -u fm-monitor -f
+```
+
+**Erreur "usb_open error" / clé déjà utilisée**
+```bash
+sudo pkill -9 rtl_fm
+sudo systemctl restart fm-monitor
+```
+
+**VU-mètre qui se fige**
+Désactivez le service **Historique 24h** et/ou **RDS Auto** depuis le dashboard.
+
+**Blacklist du module DVB par défaut**
+Sur certains systèmes, le module DVB entre en conflit avec rtl-sdr :
+```bash
+echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtl.conf
+sudo reboot
+```
+
+---
+
+## 📜 Licence
+
+MIT License — libre d'utilisation, de modification et de distribution.
+
+---
+
+## 🙏 Crédits et dépendances
+
+- [rtl-sdr](https://osmocom.org/projects/rtl-sdr) — driver RTL-SDR
+- [redsea](https://github.com/windytan/redsea) — décodeur RDS
+- [sox](http://sox.sourceforge.net/) — traitement et encodage audio
+- [Flask](https://flask.palletsprojects.com/) — serveur web Python
+- [numpy](https://numpy.org/) — calcul RMS
+- [Material Dashboard](https://www.creative-tim.com/product/material-dashboard) — interface UI
