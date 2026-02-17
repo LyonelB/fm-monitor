@@ -32,3 +32,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+*.backup
+*.backup2
+*.old
+*.old2
+*.db
+users.json
+start.sh
+rds_server.py
