@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>FM Monitor - Graffiti Radio</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700&display=swap" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link href="/static/assets/css/material-dashboard.css?v=3.1.0" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #fafbfc; }
+    .sidenav { background: #2c3e50 !important; }
+    .card {
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
+        border: 1px solid #e1e4e8;
+        background: white;
+    }
+    .card-header {
+        background: white;
+        border-bottom: 1px solid #e1e4e8;
+        padding: 16px 20px;
+    }
+    .card-header h6 {
+        color: #24292e;
+        font-weight: 600;
+        font-size: 14px;
+        margin: 0;
+    }
+    .stat-card-simple { padding: 20px; }
+    .stat-label {
+        font-size: 12px;
+        color: #6a737d;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .stat-value { font-size: 24px; color: #24292e; font-weight: 600; }
+    .config-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    .config-info-item { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .config-info-item:last-child { margin-bottom: 0; }
+    .config-info-label { font-size: 11px; opacity: 0.9; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .config-info-value { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; }
+    .vu-meter-container { background: white; border-radius: 6px; padding: 20px; border: 1px solid #e1e4e8; }
+    .vu-meter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .vu-meter-title { font-size: 11px; font-weight: 600; color: #6a737d; text-transform: uppercase; letter-spacing: 0.5px; }
+    .vu-meter-value { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: #24292e; }
+    .vu-meter-bars-container {
+        display: flex; gap: 1px; height: 70px;
+        align-items: flex-end; background: #f6f8fa;
+        border-radius: 4px; padding: 6px;
+    }
+    .vu-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; background: transparent; }
+    .vu-bar-fill { width: 100%; height: 0%; transition: height 0.05s linear; border-radius: 1px 1px 0 0; }
+    .vu-meter-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 9px; color: #959da5; font-weight: 500; }
+    .play-button {
+        width: 56px; height: 56px; border-radius: 50%;
+        border: 2px solid #d1d5da; background: white;
+        color: #24292e; cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .play-button:hover { border-color: #0366d6; color: #0366d6; }
+    .play-button.playing { border-color: #0366d6; background: #0366d6; color: white; }
+    .material-icons-round { font-size: 28px; }
+    .volume-control { display: flex; align-items: center; gap: 12px; }
+    .volume-slider { flex: 1; height: 3px; border-radius: 2px; background: #e1e4e8; outline: none; -webkit-appearance: none; }
+    .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #0366d6; cursor: pointer; }
+    .rds-display {
+        font-family: 'Courier New', monospace;
+        font-size: 20px;
+        font-weight: 600;
+        color: #24292e;
+        background: #f6f8fa;
+        padding: 16px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #e1e4e8;
+        letter-spacing: 1px;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        word-break: break-word;
+    }
+    .alert-info {
+        background: #f1f8ff; border: 1px solid #c8e1ff;
+        color: #0366d6; padding: 10px 12px; border-radius: 6px; font-size: 12px;
+    }
+    .btn {
+        padding: 8px 16px; border-radius: 6px; font-size: 14px;
+        font-weight: 500; border: 1px solid; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: #0366d6; color: white; border-color: #0366d6; }
+    .btn-primary:hover:not(:disabled) { background: #0256c7; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* === PANNEAU DE CONTRÔLE DES SERVICES === */
+    .services-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+    .service-card {
+        border: 1px solid #e1e4e8;
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: white;
+        transition: all 0.2s;
+    }
+    .service-card.active { border-color: #28a745; background: #f0fff4; }
+    .service-card.inactive { border-color: #e1e4e8; background: #fafbfc; }
+    .service-info { display: flex; align-items: center; gap: 10px; }
+    .service-icon { font-size: 20px; }
+    .service-icon.active { color: #28a745; }
+    .service-icon.inactive { color: #6a737d; }
+    .service-name { font-size: 13px; font-weight: 600; color: #24292e; }
+    .service-state { font-size: 11px; font-weight: 500; margin-top: 2px; }
+    .service-state.active { color: #28a745; }
+    .service-state.inactive { color: #6a737d; }
+
+    /* Toggle switch */
+    .toggle-switch { position: relative; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+        position: absolute; cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #d1d5da; border-radius: 24px;
+        transition: 0.3s;
+    }
+    .toggle-slider:before {
+        position: absolute; content: "";
+        height: 18px; width: 18px; left: 3px; bottom: 3px;
+        background: white; border-radius: 50%; transition: 0.3s;
+    }
+    input:checked + .toggle-slider { background: #28a745; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* Badge monitoring */
+    .monitoring-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 12px; border-radius: 20px;
+        font-size: 12px; font-weight: 600;
+    }
+    .monitoring-badge.running { background: #dcffe4; color: #22863a; }
+    .monitoring-badge.stopped { background: #ffeef0; color: #d73a49; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: #22863a; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  </style>
+</head>
+
+<body class="g-sidenav-show bg-gray-200">
+  <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3" style="background: #2c3e50;">
+    <div class="sidenav-header">
+      <a class="navbar-brand m-0" href="/">
+        <i class="material-icons-round text-white" style="font-size: 24px;">radio</i>
+        <span class="ms-2 font-weight-bold text-white">FM Monitor</span>
+      </a>
+    </div>
+    <hr class="horizontal light mt-0 mb-2">
+    <div class="collapse navbar-collapse w-auto">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link text-white" href="/" style="background: rgba(255,255,255,0.1);">
+            <i class="material-icons-round" style="font-size: 20px;">dashboard</i>
+            <span class="ms-2">Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="/config">
+            <i class="material-icons-round" style="font-size: 20px;">settings</i>
+            <span class="ms-2">Configuration</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="/stats">
+            <i class="material-icons-round" style="font-size: 20px;">assessment</i>
+            <span class="ms-2">Statistiques</span>
+          </a>
+        </li>
+        <li class="nav-item mt-3">
+          <a class="nav-link text-white" href="/logout">
+            <i class="material-icons-round" style="font-size: 20px;">logout</i>
+            <span class="ms-2">Déconnexion</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl">
+      <div class="container-fluid py-1 px-3">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <h6 class="font-weight-bolder mb-0" style="color: #24292e;">Dashboard</h6>
+          <div id="monitoring-badge" class="monitoring-badge running">
+            <div class="pulse"></div>
+            Monitoring actif
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+
+      <!-- Configuration en cours -->
+      <div class="card config-info">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="config-info-item">
+              <i class="material-icons-round" style="font-size: 20px;">radio</i>
+              <div>
+                <div class="config-info-label">Station</div>
+                <div class="config-info-value" id="station-name-display">Chargement...</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="config-info-item">
+              <i class="material-icons-round" style="font-size: 20px;">signal_cellular_alt</i>
+              <div>
+                <div class="config-info-label">Fréquence</div>
+                <div class="config-info-value" id="frequency-display">Chargement...</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="config-info-item">
+              <i class="material-icons-round" style="font-size: 20px;">schedule</i>
+              <div>
+                <div class="config-info-label">Démarrage</div>
+                <div class="config-info-value" id="start-time-display">Chargement...</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="config-info-item">
+              <i class="material-icons-round" style="font-size: 20px;">email</i>
+              <div>
+                <div class="config-info-label">Email alarme</div>
+                <div class="config-info-value" id="email-display" style="font-size: 13px;">Chargement...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div class="row">
+        <div class="col-xl-3 col-sm-6 mb-4">
+          <div class="card">
+            <div class="stat-card-simple">
+              <div class="stat-label">Peak Level</div>
+              <div class="stat-value" id="level-display">-100.00 dBFS</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-4">
+          <div class="card">
+            <div class="stat-card-simple">
+              <div class="stat-label">Uptime</div>
+              <div class="stat-value" id="uptime-display">0h 0m</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-4">
+          <div class="card">
+            <div class="stat-card-simple">
+              <div class="stat-label">Alertes</div>
+              <div class="stat-value" id="alerts-display">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-4">
+          <div class="card">
+            <div class="stat-card-simple">
+              <div class="stat-label">Signal</div>
+              <div class="stat-value" id="status-display">Signal OK</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANNEAU DE CONTRÔLE DES SERVICES -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6>Contrôle des services</h6>
+        </div>
+        <div class="card-body">
+          <div class="services-panel">
+
+            <!-- VU-mètre -->
+            <div class="service-card active" id="card-vu_meter">
+              <div class="service-info">
+                <i class="material-icons-round service-icon active" id="icon-vu_meter">equalizer</i>
+                <div>
+                  <div class="service-name">VU-mètre</div>
+                  <div class="service-state active" id="state-vu_meter">Actif</div>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-vu_meter" checked onchange="toggleService('vu_meter', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Player Audio -->
+            <div class="service-card active" id="card-audio">
+              <div class="service-info">
+                <i class="material-icons-round service-icon active" id="icon-audio">volume_up</i>
+                <div>
+                  <div class="service-name">Player Audio</div>
+                  <div class="service-state active" id="state-audio">Actif</div>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-audio" checked onchange="toggleService('audio', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Watchdog -->
+            <div class="service-card active" id="card-watchdog">
+              <div class="service-info">
+                <i class="material-icons-round service-icon active" id="icon-watchdog">security</i>
+                <div>
+                  <div class="service-name">Watchdog</div>
+                  <div class="service-state active" id="state-watchdog">Actif</div>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-watchdog" checked onchange="toggleService('watchdog', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- RDS automatique -->
+            <div class="service-card inactive" id="card-rds">
+              <div class="service-info">
+                <i class="material-icons-round service-icon inactive" id="icon-rds">broadcast_on_personal</i>
+                <div>
+                  <div class="service-name">RDS Auto</div>
+                  <div class="service-state inactive" id="state-rds">Inactif</div>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-rds" onchange="toggleService('rds', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <!-- Historique audio -->
+            <div class="service-card active" id="card-history">
+              <div class="service-info">
+                <i class="material-icons-round service-icon active" id="icon-history">history</i>
+                <div>
+                  <div class="service-name">Historique 24h</div>
+                  <div class="service-state active" id="state-history">Actif</div>
+                </div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-history" checked onchange="toggleService('history', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Player & RDS -->
+      <div class="row">
+        <div class="col-lg-6 mb-4">
+          <div class="card">
+            <div class="card-header">
+              <h6>Lecteur Audio & VU-Mètre</h6>
+            </div>
+            <div class="card-body">
+              <audio id="audio-player" preload="auto"></audio>
+              <div class="d-flex align-items-center mb-4">
+                <button class="play-button me-3" id="play-btn" onclick="togglePlay()">
+                  <i class="material-icons-round">play_arrow</i>
+                </button>
+                <div class="volume-control flex-grow-1">
+                  <i class="material-icons-round" style="color: #6a737d; font-size: 20px;">volume_up</i>
+                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="80">
+                  <span id="volume-value" style="font-size: 13px; color: #6a737d; font-weight: 500;">80%</span>
+                </div>
+              </div>
+              <div class="vu-meter-container">
+                <div class="vu-meter-header">
+                  <span class="vu-meter-title">Peak Level (dBFS)</span>
+                  <span class="vu-meter-value" id="vu-meter-value-main">-100.00</span>
+                </div>
+                <div class="vu-meter-bars-container" id="vu-meter-bars-main"></div>
+                <div class="vu-meter-scale">
+                  <span>-100</span><span>-80</span><span>-60</span>
+                  <span>-40</span><span>-20</span><span>0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+          <div class="card">
+            <div class="card-header">
+              <h6>Informations RDS</h6>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <div class="stat-label mb-2">Program Service (PS)</div>
+                <div class="rds-display" id="rds-ps-display">-</div>
+              </div>
+              <div class="mb-3">
+                <div class="stat-label mb-2">RadioText (RT)</div>
+                <div class="rds-display" id="rds-rt-display">-</div>
+              </div>
+              <div class="alert-info">
+                <i class="material-icons-round me-2" style="font-size: 16px; vertical-align: middle;">info</i>
+                Activez "RDS Auto" pour mettre à jour les infos toutes les 10s
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/static/assets/js/core/popper.min.js"></script>
+  <script src="/static/assets/js/core/bootstrap.min.js"></script>
+  <script src="/static/assets/js/material-dashboard.min.js?v=3.1.0"></script>
+
+  <script>
+    const audioPlayer = document.getElementById('audio-player');
+    const playBtn = document.getElementById('play-btn');
+    const volumeSlider = document.getElementById('volume-slider');
+    let isPlaying = false;
+
+    // =============================================
+    // AUDIO PLAYER
+    // =============================================
+    function togglePlay() {
+        if (isPlaying) {
+            audioPlayer.pause();
+            playBtn.innerHTML = '<i class="material-icons-round">play_arrow</i>';
+            playBtn.classList.remove('playing');
+            isPlaying = false;
+        } else {
+            audioPlayer.src = '/stream.mp3?nocache=' + Date.now();
+            audioPlayer.load();
+            audioPlayer.play();
+            playBtn.innerHTML = '<i class="material-icons-round">pause</i>';
+            playBtn.classList.add('playing');
+            isPlaying = true;
+        }
+    }
+
+    audioPlayer.addEventListener('error', () => {
+        if (isPlaying) {
+            setTimeout(() => {
+                audioPlayer.src = '/stream.mp3?nocache=' + Date.now();
+                audioPlayer.load();
+                audioPlayer.play();
+            }, 1000);
+        }
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        audioPlayer.volume = e.target.value / 100;
+        document.getElementById('volume-value').textContent = e.target.value + '%';
+    });
+    audioPlayer.volume = 0.8;
+
+    // =============================================
+    // VU-METRE
+    // =============================================
+    const vuMeterBarsMain = document.getElementById('vu-meter-bars-main');
+    const vuBarsMain = [];
+    for (let i = 0; i < 200; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'vu-bar';
+        const fill = document.createElement('div');
+        fill.className = 'vu-bar-fill';
+        const percent = (i / 200) * 100;
+        if (percent < 60) fill.style.backgroundColor = '#28a745';
+        else if (percent < 75) fill.style.backgroundColor = '#ffc107';
+        else fill.style.backgroundColor = '#dc3545';
+        bar.appendChild(fill);
+        vuMeterBarsMain.appendChild(bar);
+        vuBarsMain.push(fill);
+    }
+
+    function updateVUMeter(levelValue) {
+        const value = Math.max(0, Math.min(100, levelValue));
+        const dbValue = value - 100;
+        document.getElementById('vu-meter-value-main').textContent = dbValue.toFixed(2);
+        const activeBars = Math.round((value / 100) * 200);
+        for (let i = 0; i < vuBarsMain.length; i++) {
+            vuBarsMain[i].style.height = i < activeBars ? '100%' : '0%';
+        }
+    }
+
+    // =============================================
+    // STATS & CONFIG
+    // =============================================
+    async function loadConfig() {
+        try {
+            const response = await fetch('/api/config/full');
+            const config = await response.json();
+            document.getElementById('station-name-display').textContent = config.station?.name || 'Graffiti Radio';
+            document.getElementById('frequency-display').textContent = config.rtl_sdr?.frequency || '88.6M';
+            let emailDisplay = 'Non configuré';
+            if (config.email?.recipient_emails) {
+                const recip = config.email.recipient_emails;
+                emailDisplay = Array.isArray(recip) ? recip[0] : recip.split(',')[0].trim();
+            }
+            document.getElementById('email-display').textContent = emailDisplay;
+        } catch (error) {
+            console.error('Erreur config:', error);
+        }
+    }
+
+    async function updateStats() {
+        try {
+            const response = await fetch('/api/stats');
+            const stats = await response.json();
+
+            const level = stats.current_level || -100;
+            const levelPercent = Math.max(0, Math.min(100, level + 100));
+
+            document.getElementById('level-display').textContent = level.toFixed(2) + ' dBFS';
+            updateVUMeter(levelPercent);
+
+            const uptimeSeconds = stats.uptime || 0;
+            const hours = Math.floor(uptimeSeconds / 3600);
+            const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+            document.getElementById('uptime-display').textContent = hours + 'h ' + minutes + 'm';
+            document.getElementById('alerts-display').textContent = stats.alerts_sent || 0;
+            document.getElementById('status-display').textContent = stats.signal_ok ? 'Signal OK' : 'Signal Perdu';
+
+            if (stats.start_time) {
+                document.getElementById('start-time-display').textContent = stats.start_time;
+            }
+
+            // Badge monitoring
+            const badge = document.getElementById('monitoring-badge');
+            if (stats.status === 'En cours') {
+                badge.className = 'monitoring-badge running';
+                badge.innerHTML = '<div class="pulse"></div> Monitoring actif';
+            } else {
+                badge.className = 'monitoring-badge stopped';
+                badge.innerHTML = 'Monitoring arrêté';
+            }
+
+            // Mettre à jour PS/RT si RDS auto actif
+            if (stats.ps && stats.ps !== '-') {
+                document.getElementById('rds-ps-display').textContent = stats.ps;
+            }
+            if (stats.rt && stats.rt !== '-') {
+                document.getElementById('rds-rt-display').textContent = stats.rt;
+            }
+
+        } catch (error) {
+            console.error('Erreur stats:', error);
+        }
+    }
+
+    // =============================================
+    // CONTRÔLE DES SERVICES
+    // =============================================
+    async function loadServicesStatus() {
+        try {
+            const response = await fetch('/api/services/status');
+            const data = await response.json();
+            if (data.status === 'success') {
+                const services = data.services;
+                updateServiceUI('vu_meter', services.vu_meter);
+                updateServiceUI('audio', services.audio);
+                updateServiceUI('watchdog', services.watchdog);
+                updateServiceUI('rds', services.rds);
+                updateServiceUI('history', services.history);
+            }
+        } catch (error) {
+            console.error('Erreur services status:', error);
+        }
+    }
+
+    function updateServiceUI(service, enabled) {
+        const card = document.getElementById(`card-${service}`);
+        const icon = document.getElementById(`icon-${service}`);
+        const state = document.getElementById(`state-${service}`);
+        const toggle = document.getElementById(`toggle-${service}`);
+
+        if (!card) return;
+
+        toggle.checked = enabled;
+
+        if (enabled) {
+            card.className = 'service-card active';
+            icon.className = 'material-icons-round service-icon active';
+            state.className = 'service-state active';
+            state.textContent = 'Actif';
+        } else {
+            card.className = 'service-card inactive';
+            icon.className = 'material-icons-round service-icon inactive';
+            state.className = 'service-state inactive';
+            state.textContent = 'Inactif';
+        }
+    }
+
+    async function toggleService(service, enabled) {
+        try {
+            const response = await fetch('/api/services/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service, enabled })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const services = data.services;
+                updateServiceUI('vu_meter', services.vu_meter);
+                updateServiceUI('audio', services.audio);
+                updateServiceUI('watchdog', services.watchdog);
+                updateServiceUI('rds', services.rds);
+                updateServiceUI('history', services.history);
+
+                // Si VU-mètre désactivé, mettre à 0
+                if (service === 'vu_meter' && !enabled) {
+                    updateVUMeter(0);
+                    document.getElementById('vu-meter-value-main').textContent = '--';
+                }
+
+                // Si RDS auto activé/désactivé
+                if (service === 'rds') {
+                    if (enabled) {
+                        startRDSTimer();
+                    } else {
+                        stopRDSTimer();
+                        document.getElementById('rds-ps-display').textContent = '-';
+                        document.getElementById('rds-rt-display').textContent = '-';
+                    }
+                }
+            } else {
+                console.error('Erreur toggle service:', data.message);
+            }
+        } catch (error) {
+            console.error('Erreur toggle service:', error);
+        }
+    }
+
+    // =============================================
+    // RDS AUTO - TIMER 10s
+    // =============================================
+    let rdsTimer = null;
+
+    async function fetchRDS() {
+        try {
+            const response = await fetch('/api/rds/read_ps', { method: 'POST' });
+            const data = await response.json();
+            if (data.status === 'success') {
+                if (data.ps && data.ps !== '-') {
+                    document.getElementById('rds-ps-display').textContent = data.ps;
+                }
+                if (data.rt && data.rt !== '-') {
+                    document.getElementById('rds-rt-display').textContent = data.rt;
+                }
+            }
+        } catch (error) {
+            console.error('Erreur RDS auto:', error);
+        }
+    }
+
+    function startRDSTimer() {
+        stopRDSTimer();
+        fetchRDS(); // lecture immédiate au démarrage
+        rdsTimer = setInterval(fetchRDS, 10000);
+    }
+
+    function stopRDSTimer() {
+        if (rdsTimer) {
+            clearInterval(rdsTimer);
+            rdsTimer = null;
+        }
+    }
+
+    // =============================================
+    // INITIALISATION
+    // =============================================
+    loadConfig();
+    loadServicesStatus();
+
+    // SSE : connexion persistante pour les stats
+    let statsSource = null;
+
+    function connectSSE() {
+        if (statsSource) {
+            statsSource.close();
+        }
+
+        statsSource = new EventSource('/api/stream/stats');
+
+        statsSource.onmessage = function(event) {
+            try {
+                const stats = JSON.parse(event.data);
+
+                const level = stats.current_level || -100;
+                const levelPercent = Math.max(0, Math.min(100, level + 100));
+
+                document.getElementById('level-display').textContent = level.toFixed(2) + ' dBFS';
+                updateVUMeter(levelPercent);
+
+                const uptimeSeconds = stats.uptime || 0;
+                const hours = Math.floor(uptimeSeconds / 3600);
+                const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+                document.getElementById('uptime-display').textContent = hours + 'h ' + minutes + 'm';
+                document.getElementById('alerts-display').textContent = stats.alerts_sent || 0;
+                document.getElementById('status-display').textContent = stats.signal_ok ? 'Signal OK' : 'Signal Perdu';
+
+                if (stats.start_time) {
+                    document.getElementById('start-time-display').textContent = stats.start_time;
+                }
+
+                // Badge monitoring
+                const badge = document.getElementById('monitoring-badge');
+                if (stats.status === 'En cours') {
+                    badge.className = 'monitoring-badge running';
+                    badge.innerHTML = '<div class="pulse"></div> Monitoring actif';
+                } else {
+                    badge.className = 'monitoring-badge stopped';
+                    badge.innerHTML = 'Monitoring arrêté';
+                }
+
+                // PS/RT si RDS auto actif
+                if (stats.ps && stats.ps !== '-') {
+                    document.getElementById('rds-ps-display').textContent = stats.ps;
+                }
+                if (stats.rt && stats.rt !== '-') {
+                    document.getElementById('rds-rt-display').textContent = stats.rt;
+                }
+
+            } catch(e) {
+                console.error('Erreur parsing SSE:', e);
+            }
+        };
+
+        statsSource.onerror = function() {
+            console.warn('SSE déconnecté, reconnexion dans 2s...');
+            statsSource.close();
+            setTimeout(connectSSE, 2000);
+        };
+    }
+
+    connectSSE();
+    setInterval(loadServicesStatus, 10000);  // Sync état services toutes les 10s
+  </script>
+</body>
+</html>

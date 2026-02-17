@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""
+Application Flask pour le monitoring FM
+"""
+from flask import Flask, render_template, Response, jsonify, request, session, redirect, url_for
+import logging
+import time
+import json
+from monitor import FMMonitor
+from auth import Auth
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+app.secret_key = 'fm-monitor-secret-key-changez-moi-en-production'
+auth = Auth()
+
+# Instance globale du moniteur
+monitor = None
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Page de connexion"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if auth.verify_credentials(username, password):
+            session['logged_in'] = True
+            session['username'] = username
+            next_page = request.args.get('next', '/')
+            logger.info(f"Connexion réussie pour {username}")
+            return redirect(next_page)
+        else:
+            logger.warning(f"Tentative de connexion échouée pour {username}")
+            return render_template('login.html', error='Identifiants incorrects')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Déconnexion"""
+    username = session.get('username', 'unknown')
+    session.clear()
+    logger.info(f"Déconnexion de {username}")
+    return redirect(url_for('login'))
+
+@app.route('/')
+@auth.login_required
+def index():
+    """Page d'accueil avec le dashboard"""
+    return render_template('index.html')
+
+@app.route('/config')
+@auth.login_required
+def config():
+    """Page de configuration"""
+    return render_template('config.html')
+
+@app.route('/stats')
+@auth.login_required
+def stats():
+    """Page des statistiques"""
+    return render_template('stats.html')
+
+@app.route('/stream.mp3')
+@auth.login_required
+def stream():
+    """Stream audio en direct"""
+    def generate():
+        """Générateur de chunks audio"""
+        logger.info("Client connecté au stream audio")
+        try:
+            while True:
+                if monitor and monitor.running:
+                    chunk = monitor.get_audio_chunk()
+                    if chunk:
+                        yield chunk
+                    else:
+                        time.sleep(0.05)
+                else:
+                    break
+        except GeneratorExit:
+            logger.info("Client déconnecté du stream audio")
+        except Exception as e:
+            logger.error(f"Erreur de streaming: {e}")
+    
+    response = Response(
+        generate(),
+        mimetype='audio/mpeg',
+        headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Content-Type-Options': 'nosniff'
+        }
+    )
+    return response
+
+@app.route('/api/stats')
+@auth.login_required
+def get_stats():
+    """Récupère les statistiques actuelles"""
+    if monitor:
+        return jsonify(monitor.get_stats())
+    return jsonify({'error': 'Monitor not initialized'}), 503
+
+@app.route('/api/config/full')
+@auth.login_required
+def get_config_full():
+    """Retourne la configuration complète"""
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        return jsonify(config)
+    except Exception as e:
+        logger.error(f"Erreur lors de la lecture de la config: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/config/save', methods=['POST'])
+@auth.login_required
+def save_config():
+    """Sauvegarde la configuration"""
+    try:
+        data = request.get_json()
+        
+        # Charger la config actuelle
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        
+        # Mettre à jour les valeurs (données envoyées à plat)
+        if 'frequency' in data:
+            config['rtl_sdr']['frequency'] = data['frequency']
+            config['station']['frequency'] = data['frequency']
+        
+        if 'station_name' in data:
+            config['station']['name'] = data['station_name']
+        
+        if 'gain' in data:
+            config['rtl_sdr']['gain'] = data['gain']
+        
+        if 'silence_threshold' in data:
+            config['audio']['silence_threshold'] = float(data['silence_threshold'])
+        
+        if 'silence_duration' in data:
+            config['audio']['silence_duration'] = int(data['silence_duration'])
+        
+        if 'sender_email' in data:
+            config['email']['sender_email'] = data['sender_email']
+        
+        if 'sender_password' in data:
+            config['email']['sender_password'] = data['sender_password']
+        
+        if 'recipient_emails' in data:
+            # Convertir string avec virgules en array
+            emails = data['recipient_emails']
+            if isinstance(emails, str):
+                emails = [e.strip() for e in emails.split(',') if e.strip()]
+            config['email']['recipient_emails'] = emails
+        
+        # Sauvegarder la config
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        logger.info("Configuration sauvegardée avec succès")
+        
+        return jsonify({'status': 'success', 'message': 'Configuration enregistrée'})
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de la sauvegarde de la config: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/presets')
+@auth.login_required
+def get_presets():
+    """Retourne la liste des presets"""
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        return jsonify(config.get('presets', []))
+    except Exception as e:
+        logger.error(f"Erreur lors de la lecture des presets: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logs')
+@auth.login_required
+def get_logs():
+    """Récupère les derniers logs système"""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['journalctl', '-u', 'fm-monitor', '-n', '100', '--no-pager'],
+            capture_output=True,
+            text=True
+        )
+        return jsonify({'logs': result.stdout})
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des logs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/test-email', methods=['POST'])
+@auth.login_required
+def test_email():
+    """Envoie un email de test"""
+    try:
+        if monitor and monitor.email_alert:
+            success = monitor.email_alert.send_alert(
+                subject="[TEST] FM Monitor - Email de test",
+                level=-20.0
+            )
+            if success:
+                return jsonify({'status': 'success', 'message': 'Email envoyé'})
+            else:
+                return jsonify({'status': 'error', 'message': 'Erreur d\'envoi'}), 500
+        return jsonify({'status': 'error', 'message': 'Monitor not initialized'}), 503
+    except Exception as e:
+        logger.error(f"Erreur test email: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/audio/history')
+@auth.login_required
+def get_audio_history():
+    """Récupère l'historique des niveaux audio (24h)"""
+    try:
+        if monitor and hasattr(monitor, 'db'):
+            history = monitor.db.get_audio_history(hours=24)
+            return jsonify({'status': 'success', 'data': history})
+        return jsonify({'status': 'error', 'message': 'Database not available'}), 503
+    except Exception as e:
+        logger.error(f"Erreur récupération historique: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/alerts/history')
+@auth.login_required
+def get_alerts_history():
+    """Récupère l'historique des alertes"""
+    try:
+        if monitor and hasattr(monitor, 'db'):
+            alerts = monitor.db.get_alerts_history(limit=50)
+            return jsonify({'status': 'success', 'data': alerts})
+        return jsonify({'status': 'error', 'message': 'Database not available'}), 503
+    except Exception as e:
+        logger.error(f"Erreur récupération alertes: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/restart', methods=['POST'])
+@auth.login_required
+def restart_monitoring():
+    """Redémarre le monitoring"""
+    global monitor
+    try:
+        if monitor:
+            logger.info("Redémarrage du monitoring demandé")
+            monitor.stop()
+            time.sleep(2)
+            monitor.start()
+            return jsonify({'status': 'success', 'message': 'Monitoring redémarré'})
+        return jsonify({'status': 'error', 'message': 'Monitor not initialized'}), 503
+    except Exception as e:
+        logger.error(f"Erreur redémarrage: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/rds/read_ps', methods=['POST'])
+@auth.login_required
+def read_rds_ps():
+    """Lecture ponctuelle du PS"""
+    try:
+        monitor.read_rds_once(duration=10)
+        return jsonify({'status': 'success', 'ps': monitor.stats.get('ps', 'Non disponible')})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/rds/read_rt', methods=['POST'])
+@auth.login_required
+def read_rds_rt():
+    """Lecture ponctuelle du RadioText"""
+    try:
+        monitor.read_rds_once(duration=10)
+        return jsonify({'status': 'success', 'rt': monitor.stats.get('rt', 'Non disponible')})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+if __name__ == '__main__':
+    try:
+        # Démarrer le moniteur
+        monitor = FMMonitor('config.json')
+        monitor.start()
+        
+        logger.info("Démarrage du serveur Flask sur 0.0.0.0:5000")
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    except KeyboardInterrupt:
+        logger.info("Arrêt demandé par l'utilisateur")
+        if monitor:
+            monitor.stop()
+    except Exception as e:
+        logger.error(f"Erreur fatale: {e}")
+        if monitor:
+            monitor.stop()

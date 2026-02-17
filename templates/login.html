@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Login - FM Monitor</title>
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700&display=swap" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .login-container {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .login-header i {
+        font-size: 48px;
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+    
+    .login-header h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #24292e;
+        margin: 0;
+    }
+    
+    .login-header p {
+        font-size: 14px;
+        color: #6a737d;
+        margin: 5px 0 0 0;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #24292e;
+        margin-bottom: 6px;
+        display: block;
+    }
+    
+    .form-control {
+        width: 100%;
+        border: 1px solid #d1d5da;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 14px;
+        color: #24292e;
+        box-sizing: border-box;
+    }
+    
+    .form-control:focus {
+        border-color: #0366d6;
+        box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+        outline: none;
+    }
+    
+    .btn-login {
+        width: 100%;
+        padding: 12px;
+        background: #0366d6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-login:hover {
+        background: #0256c7;
+    }
+    
+    .error-message {
+        background: #ffeef0;
+        border: 1px solid #f97583;
+        color: #d73a49;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .default-creds {
+        margin-top: 20px;
+        padding: 12px;
+        background: #f6f8fa;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #6a737d;
+        text-align: center;
+    }
+    
+    .default-creds strong {
+        color: #24292e;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <i class="material-icons-round">radio</i>
+      <h1>FM Monitor</h1>
+      <p>Connexion requise</p>
+    </div>
+    
+    {% if error %}
+    <div class="error-message">
+      <i class="material-icons-round" style="font-size: 18px;">error</i>
+      {{ error }}
+    </div>
+    {% endif %}
+    
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Nom d'utilisateur</label>
+        <input type="text" name="username" class="form-control" placeholder="admin" required autofocus>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+      
+      <button type="submit" class="btn-login">
+        Se connecter
+      </button>
+    </form>
+    
+    <div class="default-creds">
+      Par défaut : <strong>admin</strong> / <strong>admin123</strong>
+    </div>
+  </div>
+</body>
+</html>
