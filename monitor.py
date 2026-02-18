@@ -141,6 +141,13 @@ class FMMonitor:
         self.stats['start_time'] = datetime.now()
         self.stats['status'] = 'En cours'
 
+        # Créer le FIFO pour le streaming audio
+        fifo_path = '/tmp/fm_stream.mp3'
+        if os.path.exists(fifo_path):
+            os.remove(fifo_path)
+        os.mkfifo(fifo_path)
+        logger.info(f"FIFO créé : {fifo_path}")
+
         # Nettoyer les processus existants
         os.system("pkill -9 rtl_fm 2>/dev/null")
         os.system("pkill -9 sox 2>/dev/null")
@@ -538,5 +545,14 @@ class FMMonitor:
         os.system("pkill -9 rtl_fm 2>/dev/null")
         os.system("pkill -9 sox 2>/dev/null")
         os.system("pkill -9 redsea 2>/dev/null")
+
+        # Supprimer le FIFO
+        fifo_path = '/tmp/fm_stream.mp3'
+        if os.path.exists(fifo_path):
+            try:
+                os.remove(fifo_path)
+                logger.info("FIFO supprimé")
+            except:
+                pass
 
         self.stats['status'] = 'Arrêté'

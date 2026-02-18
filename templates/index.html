@@ -42,7 +42,6 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 20px;
-        border-radius: 8px;
         margin-bottom: 20px;
         border: none;
     }
@@ -50,14 +49,14 @@
     .config-info-item:last-child { margin-bottom: 0; }
     .config-info-label { font-size: 11px; opacity: 0.9; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
     .config-info-value { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; }
-    .vu-meter-container { background: white; border-radius: 6px; padding: 20px; border: 1px solid #e1e4e8; }
+    .vu-meter-container { background: white; padding: 20px; border: 1px solid #e1e4e8; }
     .vu-meter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .vu-meter-title { font-size: 11px; font-weight: 600; color: #6a737d; text-transform: uppercase; letter-spacing: 0.5px; }
     .vu-meter-value { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 700; color: #24292e; }
     .vu-meter-bars-container {
         display: flex; gap: 1px; height: 70px;
         align-items: flex-end; background: #f6f8fa;
-        border-radius: 4px; padding: 6px;
+        padding: 6px;
     }
     .vu-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; background: transparent; }
     .vu-bar-fill { width: 100%; height: 0%; transition: height 0.05s linear; border-radius: 1px 1px 0 0; }
@@ -72,7 +71,7 @@
     .play-button.playing { border-color: #0366d6; background: #0366d6; color: white; }
     .material-icons-round { font-size: 28px; }
     .volume-control { display: flex; align-items: center; gap: 12px; }
-    .volume-slider { flex: 1; height: 3px; border-radius: 2px; background: #e1e4e8; outline: none; -webkit-appearance: none; }
+    .volume-slider { flex: 1; height: 3px; background: #e1e4e8; outline: none; -webkit-appearance: none; }
     .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #0366d6; cursor: pointer; }
     .rds-display {
         font-family: 'Courier New', monospace;
@@ -81,7 +80,6 @@
         color: #24292e;
         background: #f6f8fa;
         padding: 16px;
-        border-radius: 6px;
         text-align: center;
         border: 1px solid #e1e4e8;
         letter-spacing: 1px;
@@ -93,10 +91,10 @@
     }
     .alert-info {
         background: #f1f8ff; border: 1px solid #c8e1ff;
-        color: #0366d6; padding: 10px 12px; border-radius: 6px; font-size: 12px;
+        color: #0366d6; padding: 10px 12px; font-size: 12px;
     }
     .btn {
-        padding: 8px 16px; border-radius: 6px; font-size: 14px;
+        padding: 8px 16px; font-size: 14px;
         font-weight: 500; border: 1px solid; cursor: pointer; transition: all 0.2s;
         display: inline-flex; align-items: center; gap: 6px;
     }
@@ -114,7 +112,6 @@
     }
     .service-card {
         border: 1px solid #e1e4e8;
-        border-radius: 8px;
         padding: 14px 16px;
         display: flex;
         align-items: center;
@@ -150,28 +147,28 @@
     input:checked + .toggle-slider { background: #28a745; }
     input:checked + .toggle-slider:before { transform: translateX(20px); }
 
-    /* Badge monitoring */
-    .monitoring-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 4px 12px; border-radius: 20px;
-        font-size: 12px; font-weight: 600;
-    }
-    .monitoring-badge.running { background: #dcffe4; color: #22863a; }
-    .monitoring-badge.stopped { background: #ffeef0; color: #d73a49; }
-    .pulse { width: 8px; height: 8px; border-radius: 50%; background: #22863a; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
 
 <body class="g-sidenav-show bg-gray-200">
-  <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3" style="background: #2c3e50;">
-    <div class="sidenav-header">
+  <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start" style="background: #2c3e50; margin: 0 !important; border-radius: 0 !important; height: 100vh;">
+    <div class="sidenav-header" style="padding: 16px;">
       <a class="navbar-brand m-0" href="/">
         <i class="material-icons-round text-white" style="font-size: 24px;">radio</i>
         <span class="ms-2 font-weight-bold text-white">FM Monitor</span>
       </a>
     </div>
     <hr class="horizontal light mt-0 mb-2">
+
+    <!-- Badge Monitoring Actif -->
+    <div style="padding: 12px 16px; margin: 0 16px 16px 16px; background: rgba(40, 167, 69, 0.15); border-left: 3px solid #28a745;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <i class="material-icons-round" style="font-size: 16px; color: #28a745;">radio_button_checked</i>
+        <span style="font-size: 11px; color: #fff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Monitoring actif</span>
+      </div>
+      <div style="font-family: 'Courier New', monospace; font-size: 14px; color: #fff; font-weight: 700;" id="sidebar-frequency">88.6 MHz</div>
+    </div>
+
     <div class="collapse navbar-collapse w-auto">
       <ul class="navbar-nav">
         <li class="nav-item">
@@ -192,6 +189,12 @@
             <span class="ms-2">Statistiques</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="https://github.com/LyonelB/fm-monitor" target="_blank">
+            <i class="material-icons-round" style="font-size: 20px;">info</i>
+            <span class="ms-2">À propos</span>
+          </a>
+        </li>
         <li class="nav-item mt-3">
           <a class="nav-link text-white" href="/logout">
             <i class="material-icons-round" style="font-size: 20px;">logout</i>
@@ -202,15 +205,11 @@
     </div>
   </aside>
 
-  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
-    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl">
+  <main class="main-content position-relative max-height-vh-100 h-100">
+    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none">
       <div class="container-fluid py-1 px-3">
         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <h6 class="font-weight-bolder mb-0" style="color: #24292e;">Dashboard</h6>
-          <div id="monitoring-badge" class="monitoring-badge running">
-            <div class="pulse"></div>
-            Monitoring actif
-          </div>
         </div>
       </div>
     </nav>
@@ -525,6 +524,12 @@
             const config = await response.json();
             document.getElementById('station-name-display').textContent = config.station?.name || 'Graffiti Radio';
             document.getElementById('frequency-display').textContent = config.rtl_sdr?.frequency || '88.6M';
+
+            // Mettre à jour le badge dans la sidebar
+            const freq = config.rtl_sdr?.frequency || '88.6M';
+            const freqMhz = freq.replace('M', ' MHz');
+            document.getElementById('sidebar-frequency').textContent = freqMhz;
+
             let emailDisplay = 'Non configuré';
             if (config.email?.recipient_emails) {
                 const recip = config.email.recipient_emails;
@@ -556,16 +561,6 @@
 
             if (stats.start_time) {
                 document.getElementById('start-time-display').textContent = stats.start_time;
-            }
-
-            // Badge monitoring
-            const badge = document.getElementById('monitoring-badge');
-            if (stats.status === 'En cours') {
-                badge.className = 'monitoring-badge running';
-                badge.innerHTML = '<div class="pulse"></div> Monitoring actif';
-            } else {
-                badge.className = 'monitoring-badge stopped';
-                badge.innerHTML = 'Monitoring arrêté';
             }
 
             // Mettre à jour PS/RT si RDS auto actif
@@ -736,16 +731,6 @@
 
                 if (stats.start_time) {
                     document.getElementById('start-time-display').textContent = stats.start_time;
-                }
-
-                // Badge monitoring
-                const badge = document.getElementById('monitoring-badge');
-                if (stats.status === 'En cours') {
-                    badge.className = 'monitoring-badge running';
-                    badge.innerHTML = '<div class="pulse"></div> Monitoring actif';
-                } else {
-                    badge.className = 'monitoring-badge stopped';
-                    badge.innerHTML = 'Monitoring arrêté';
                 }
 
                 // PS/RT si RDS auto actif
