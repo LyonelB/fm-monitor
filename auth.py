@@ -1,50 +1,161 @@
-#!/usr/bin/env python3
 """
-Module d'authentification simple
+Gestion de l'authentification - Version sécurisée avec Bcrypt
 """
 from functools import wraps
-from flask import session, redirect, url_for, request
-import hashlib
+from flask import session, redirect, url_for, jsonify, request
+from flask_bcrypt import Bcrypt
 import json
-import os
+import logging
+
+logger = logging.getLogger(__name__)
+bcrypt = Bcrypt()
 
 class Auth:
-    def __init__(self, config_file='users.json'):
-        self.config_file = config_file
-        self.init_users()
+    def __init__(self, config_path='config.json'):
+        """Initialise le système d'authentification"""
+        self.config_path = config_path
+        self.users = self.load_users()
     
-    def init_users(self):
-        """Crée le fichier users.json s'il n'existe pas"""
-        if not os.path.exists(self.config_file):
-            # Utilisateur par défaut: admin / admin123
-            default_users = {
-                'admin': self.hash_password('admin123')
+    def load_users(self):
+        """
+        Charge les utilisateurs depuis config.json
+        
+        Format attendu dans config.json:
+        {
+            "auth": {
+                "username": "admin",
+                "password_hash": "$2b$12$..."  # Hash Bcrypt
             }
-            with open(self.config_file, 'w') as f:
-                json.dump(default_users, f, indent=2)
+        }
+        """
+        try:
+            with open(self.config_path, 'r') as f:
+                config = json.load(f)
+            
+            auth_config = config.get('auth', {})
+            
+            if 'username' in auth_config and 'password_hash' in auth_config:
+                return {
+                    auth_config['username']: auth_config['password_hash']
+                }
+            else:
+                logger.warning("Aucune configuration d'authentification trouvée dans config.json")
+                # Créer un utilisateur par défaut (admin/password) si aucun n'existe
+                return self.create_default_user()
+        
+        except FileNotFoundError:
+            logger.error(f"Fichier {self.config_path} non trouvé")
+            return self.create_default_user()
+        except json.JSONDecodeError:
+            logger.error(f"Erreur de parsing du fichier {self.config_path}")
+            return self.create_default_user()
     
-    def hash_password(self, password):
-        """Hash un mot de passe avec SHA256"""
-        return hashlib.sha256(password.encode()).hexdigest()
+    def create_default_user(self):
+        """
+        Crée un utilisateur par défaut (admin/password)
+        ⚠️ À changer immédiatement après le premier login !
+        """
+        logger.warning("Création d'un utilisateur par défaut: admin/password")
+        logger.warning("⚠️ CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !")
+        
+        # Hash de "password"
+        default_hash = bcrypt.generate_password_hash('password').decode('utf-8')
+        
+        # Sauvegarder dans config.json
+        try:
+            with open(self.config_path, 'r') as f:
+                config = json.load(f)
+        except:
+            config = {}
+        
+        config['auth'] = {
+            'username': 'admin',
+            'password_hash': default_hash
+        }
+        
+        with open(self.config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        return {'admin': default_hash}
     
     def verify_credentials(self, username, password):
-        """Vérifie les identifiants"""
-        try:
-            with open(self.config_file, 'r') as f:
-                users = json.load(f)
+        """
+        Vérifie les identifiants de connexion avec Bcrypt
+        
+        Args:
+            username: Nom d'utilisateur
+            password: Mot de passe en clair
+        
+        Returns:
+            bool: True si les identifiants sont corrects
+        """
+        if not username or not password:
+            return False
+        
+        # Recharger les utilisateurs à chaque vérification
+        # (pour prendre en compte les changements de mot de passe)
+        self.users = self.load_users()
+        
+        if username in self.users:
+            stored_hash = self.users[username]
             
-            if username in users:
-                return users[username] == self.hash_password(password)
-            return False
-        except Exception as e:
-            print(f"Erreur vérification: {e}")
-            return False
+            # Vérifier avec Bcrypt
+            try:
+                return bcrypt.check_password_hash(stored_hash, password)
+            except Exception as e:
+                logger.error(f"Erreur lors de la vérification du mot de passe: {e}")
+                return False
+        
+        return False
     
     def login_required(self, f):
-        """Décorateur pour protéger les routes"""
+        """
+        Décorateur pour protéger les routes nécessitant une authentification
+        
+        Usage:
+            @app.route('/protected')
+            @auth.login_required
+            def protected_route():
+                return "Protected content"
+        """
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'logged_in' not in session:
+                # Si c'est une requête JSON (API), renvoyer 401
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'status': 'error', 'message': 'Authentication required'}), 401
+                # Sinon, rediriger vers la page de login
                 return redirect(url_for('login', next=request.url))
             return f(*args, **kwargs)
         return decorated_function
+    
+    @staticmethod
+    def hash_password(password):
+        """
+        Hashe un mot de passe avec Bcrypt
+        
+        Args:
+            password: Mot de passe en clair
+        
+        Returns:
+            str: Hash Bcrypt du mot de passe
+        """
+        return bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    @staticmethod
+    def check_password(password, password_hash):
+        """
+        Vérifie un mot de passe contre son hash
+        
+        Args:
+            password: Mot de passe en clair
+            password_hash: Hash Bcrypt
+        
+        Returns:
+            bool: True si le mot de passe correspond
+        """
+        try:
+            return bcrypt.check_password_hash(password_hash, password)
+        except Exception as e:
+            logger.error(f"Erreur lors de la vérification du mot de passe: {e}")
+            return False

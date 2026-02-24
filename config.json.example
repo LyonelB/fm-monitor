@@ -1,0 +1,39 @@
+{
+  "station": {
+    "name": "Ma Radio FM",
+    "frequency": "88.6M"
+  },
+  "rtl_sdr": {
+    "frequency": "88.6M",
+    "sample_rate": "1140000",
+    "gain": "auto",
+    "device_index": "0"
+  },
+  "audio": {
+    "silence_threshold": -40.0,
+    "silence_duration": 15
+  },
+  "email": {
+    "sender_email": "votre.email@gmail.com",
+    "sender_password": "votre-mot-de-passe-application",
+    "recipient_emails": [
+      "destinataire1@email.com",
+      "destinataire2@email.com"
+    ],
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587
+  },
+  "network": {
+    "mode": "dhcp",
+    "ip": "",
+    "netmask": "",
+    "gateway": "",
+    "dns": "",
+    "wifi_ssid": "",
+    "wifi_password": ""
+  },
+  "auth": {
+    "username": "admin",
+    "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzS9qvZiCm"
+  }
+}

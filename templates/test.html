@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="/static/css/tailwind.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold text-gray-900 mb-4">Test Tailwind</h1>
+    <p class="text-gray-600">Si vous voyez cette card blanche avec ombre, Tailwind fonctionne !</p>
+  </div>
+  <script>
+    // Fonction pour récupérer le token CSRF
+    function getCSRFToken() {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.content : '';
+    }
+  </script>
+</body>
+</html>

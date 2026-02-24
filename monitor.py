@@ -51,6 +51,7 @@ class FMMonitor:
             'current_level': -100.0,
             'ps': '-',
             'rt': '-',
+            'pi': '-',
             'status': 'Arrêté'
         }
 
@@ -70,9 +71,9 @@ class FMMonitor:
         # =============================================
         self.vu_meter_enabled = True      # Calcul RMS et affichage VU-mètre
         self.audio_enabled = True          # Streaming audio (player)
-        self.watchdog_enabled = True       # Watchdog auto-relance rtl_fm
+        self.watchdog_enabled = False       # Watchdog auto-relance rtl_fm
         self.rds_enabled = False           # Lecteur RDS automatique (désactivé par défaut)
-        self.history_enabled = True        # Enregistrement historique audio 24h
+        self.history_enabled = False        # Enregistrement historique audio 24h
 
         # Queue pour sauvegarde BDD non-bloquante
         self.db_queue = queue.Queue(maxsize=100)
@@ -273,11 +274,9 @@ class FMMonitor:
                 if not chunk:
                     break
 
-                # VU-mètre désactivé : on lit quand même le stdout pour ne pas bloquer rtl_fm
-                # mais on ne calcule pas le RMS
-                if not self.vu_meter_enabled:
-                    continue
-
+                # Le calcul du niveau se fait TOUJOURS (nécessaire pour "Niveau actuel")
+                # Le flag vu_meter_enabled contrôle seulement l'affichage du VU-mètre visuel
+                
                 try:
                     samples = np.frombuffer(chunk, dtype=np.int16)
 
@@ -366,6 +365,9 @@ class FMMonitor:
                     with self.stats_lock:
                         if 'ps' in data:
                             self.stats['ps'] = data['ps']
+                        
+                        if 'pi' in data:
+                            self.stats['pi'] = data['pi']
 
                         if 'partial_radiotext' in data:
                             rt_segment = data['partial_radiotext'].strip()
@@ -400,6 +402,7 @@ class FMMonitor:
 
             ps_found = False
             rt_found = False
+            pi_found = False
             start_time = time.time()
 
             proc = subprocess.Popen(
@@ -424,6 +427,11 @@ class FMMonitor:
                                 self.stats['ps'] = data['ps'].strip()
                                 ps_found = True
                                 logger.info(f"PS trouvé: {self.stats['ps']}")
+                            
+                            if 'pi' in data and not pi_found:
+                                self.stats['pi'] = data['pi']
+                                pi_found = True
+                                logger.info(f"PI Code trouvé: {self.stats['pi']}")
 
                             if 'partial_radiotext' in data:
                                 rt_segment = data['partial_radiotext'].strip()
@@ -432,8 +440,8 @@ class FMMonitor:
                                     rt_found = True
                                     logger.info(f"RT trouvé: {rt_segment}")
 
-                            if ps_found and rt_found:
-                                logger.info("PS et RT trouvés, arrêt anticipé")
+                            if ps_found and rt_found and pi_found:
+                                logger.info("PS, RT et PI trouvés, arrêt anticipé")
                                 break
 
                         except json.JSONDecodeError:

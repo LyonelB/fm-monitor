@@ -1,367 +1,193 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Statistiques - FM Monitor</title>
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700&display=swap" />
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  <link href="/static/assets/css/material-dashboard.css?v=3.1.0" rel="stylesheet" />
+  <!-- Tailwind CSS CDN (à remplacer par fichiers locaux) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background: #fafbfc;
-    }
-
-    .sidenav {
-        background: #2c3e50 !important;
-    }
-
-    .card {
-        box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
-        border: 1px solid #e1e4e8;
-        background: white;
-    }
-
-    .card-header {
-        background: white;
-        border-bottom: 1px solid #e1e4e8;
-        padding: 16px 20px;
-    }
-
-    .card-header h6 {
-        color: #24292e;
-        font-weight: 600;
-        font-size: 14px;
-        margin: 0;
-    }
-
-    .stat-card-simple {
-        padding: 20px;
-    }
-
-    .stat-label {
-        font-size: 12px;
-        color: #6a737d;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 8px;
-    }
-
-    .stat-value {
-        font-size: 24px;
-        color: #24292e;
-        font-weight: 600;
-    }
-
-    .btn {
-        padding: 8px 16px;
-        font-size: 14px;
-        font-weight: 500;
-        border: 1px solid;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-primary {
-        background: #0366d6;
-        color: white;
-        border-color: #0366d6;
-    }
-
-    .btn-primary:hover {
-        background: #0256c7;
-    }
-
-    .btn-danger {
-        background: #dc3545;
-        color: white;
-        border-color: #dc3545;
-    }
-
-    .btn-danger:hover {
-        background: #c82333;
-    }
-
-    .btn-secondary {
-        background: white;
-        color: #24292e;
-        border-color: #d1d5da;
-    }
-
-    .btn-secondary:hover {
-        background: #f6f8fa;
-    }
-
-    .log-container {
-        background: #24292e;
-        color: #d1d5da;
-        padding: 16px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        height: 400px;
-        overflow-y: auto;
-        line-height: 1.6;
-    }
-
-    .log-line {
-        margin: 2px 0;
-    }
-
-    .log-error {
-        color: #f97583;
-    }
-
-    .log-warning {
-        color: #ffea7f;
-    }
-
-    .log-info {
-        color: #85e89d;
-    }
-
-    .alert-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .alert-table th {
-        background: #f6f8fa;
-        padding: 12px;
-        text-align: left;
-        font-size: 12px;
-        font-weight: 600;
-        color: #24292e;
-        border-bottom: 2px solid #e1e4e8;
-    }
-
-    .alert-table td {
-        padding: 12px;
-        border-bottom: 1px solid #e1e4e8;
-        font-size: 13px;
-        color: #24292e;
-    }
-
-    .alert-table tr:hover {
-        background: #f6f8fa;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 4px 8px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .badge-danger {
-        background: #ffeef0;
-        color: #d73a49;
-    }
-
-    .badge-success {
-        background: #dcffe4;
-        color: #22863a;
-    }
-
-    .chart-container {
-        position: relative;
-        height: 300px;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .logout-btn {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .logout-btn:hover {
-        background: #c82333;
-    }
+    .log-line { padding: 2px 0; }
+    .log-error { color: #ef4444; }
+    .log-warning { color: #f59e0b; }
+    .log-info { color: #10b981; }
   </style>
 </head>
 
-<body class="g-sidenav-show bg-gray-200">
-  <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start" style="background: #2c3e50; margin: 0 !important; border-radius: 0 !important; height: 100vh;">
-    <div class="sidenav-header" style="padding: 16px;">
-      <a class="navbar-brand m-0" href="/">
-        <i class="material-icons-round text-white" style="font-size: 24px;">radio</i>
-        <span class="ms-2 font-weight-bold text-white">FM Monitor</span>
+<body class="bg-gray-100">
+
+  <!-- ====== Sidebar ====== -->
+  <aside class="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-gray-900 duration-300 ease-linear">
+    <!-- Logo -->
+    <div class="flex items-center justify-between gap-2 px-6 py-5.5">
+      <a href="/">
+        <span class="text-xl font-semibold text-white">FM Monitor</span>
       </a>
     </div>
-    <hr class="horizontal light mt-0 mb-2">
-    
-    <!-- Badge Monitoring Actif -->
-    <div style="padding: 12px 16px; margin: 0 16px 16px 16px; background: rgba(40, 167, 69, 0.15); border-left: 3px solid #28a745;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-        <i class="material-icons-round" style="font-size: 16px; color: #28a745;">radio_button_checked</i>
-        <span style="font-size: 11px; color: #fff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Monitoring actif</span>
+
+    <!-- Badge Monitoring -->
+    <div class="mx-6 mt-6 mb-6 rounded bg-green-900/20 border-l-4 border-green-500 p-4">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-xs font-semibold text-green-400 uppercase tracking-wide">Monitoring actif</span>
       </div>
-      <div style="font-family: 'Courier New', monospace; font-size: 14px; color: #fff; font-weight: 700;" id="sidebar-frequency">88.6 MHz</div>
+      <div class="text-sm font-mono font-bold text-white" id="sidebar-frequency">88.6 MHz</div>
     </div>
-    
-    <div class="collapse navbar-collapse w-auto">
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link text-white" href="/">
-            <i class="material-icons-round" style="font-size: 20px;">dashboard</i>
-            <span class="ms-2">Dashboard</span>
+
+    <!-- Menu -->
+    <nav class="px-4 pb-4">
+      <ul class="mb-6 flex flex-col gap-1.5">
+        <li>
+          <a href="/" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Dashboard
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link text-white" href="/config">
-            <i class="material-icons-round" style="font-size: 20px;">settings</i>
-            <span class="ms-2">Configuration</span>
+        <li>
+          <a href="/config" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Configuration
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link text-white" href="/stats" style="background: rgba(255,255,255,0.1);">
-            <i class="material-icons-round" style="font-size: 20px;">assessment</i>
-            <span class="ms-2">Statistiques</span>
+        <li>
+          <a href="/stats" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-white bg-gray-800">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Statistiques
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link text-white" href="https://github.com/LyonelB/fm-monitor" target="_blank">
-            <i class="material-icons-round" style="font-size: 20px;">info</i>
-            <span class="ms-2">À propos</span>
-          </a>
-        </li>
-        <li class="nav-item mt-3">
-          <a class="nav-link text-white" href="/logout">
-            <i class="material-icons-round" style="font-size: 20px;">logout</i>
-            <span class="ms-2">Déconnexion</span>
+        <li>
+          <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            À propos
           </a>
         </li>
       </ul>
-    </div>
-  </aside>
 
-  <main class="main-content position-relative max-height-vh-100 h-100">
-    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none">
-      <div class="container-fluid py-1 px-3">
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <h6 class="font-weight-bolder mb-0" style="color: #24292e;">Statistiques & Historique</h6>
-          <button class="btn btn-danger" onclick="restartMonitoring()">
-            <i class="material-icons-round" style="font-size: 18px; vertical-align: middle;">restart_alt</i>
-            Redémarrer le monitoring
-          </button>
-        </div>
+      <div class="pt-6 mt-6 border-t border-gray-800">
+        <a href="/logout" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-red-900 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Déconnexion
+        </a>
       </div>
     </nav>
+  </aside>
 
-    <div class="container-fluid py-4">
-      <!-- Stats rapides -->
-      <div class="row">
-        <div class="col-xl-4 col-sm-6 mb-4">
-          <div class="card">
-            <div class="stat-card-simple">
-              <div class="stat-label">Uptime</div>
-              <div class="stat-value" id="uptime-display">0h 0m</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-xl-4 col-sm-6 mb-4">
-          <div class="card">
-            <div class="stat-card-simple">
-              <div class="stat-label">Alertes envoyées</div>
-              <div class="stat-value" id="alerts-display">0</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-xl-4 col-sm-6 mb-4">
-          <div class="card">
-            <div class="stat-card-simple">
-              <div class="stat-label">Peak Level</div>
-              <div class="stat-value" id="level-display">-100.00 dBFS</div>
-            </div>
-          </div>
-        </div>
+  <!-- ====== Main Content ====== -->
+  <div class="ml-72">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 flex w-full bg-white shadow-sm">
+      <div class="flex flex-grow items-center justify-between py-4 px-4 md:px-6 2xl:px-11">
+        <h1 class="text-2xl font-semibold text-gray-900">Statistiques</h1>
       </div>
+    </header>
 
-      <!-- Graphique historique 24h -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h6>Historique des niveaux audio (24 dernières heures)</h6>
+    <!-- Main -->
+    <main class="p-4 md:p-6 2xl:p-10">
+
+      <!-- Stats Overview -->
+      <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded bg-white p-6 shadow">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Uptime</div>
+          <div class="text-2xl font-bold text-gray-900" id="uptime">0h 0m</div>
         </div>
-        <div class="card-body">
-          <div class="chart-container">
-            <canvas id="audioChart"></canvas>
-          </div>
+
+        <div class="rounded bg-white p-6 shadow">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total alertes</div>
+          <div class="text-2xl font-bold text-gray-900" id="total-alerts">0</div>
+        </div>
+
+        <div class="rounded bg-white p-6 shadow">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Démarré le</div>
+          <div class="text-lg font-semibold text-gray-900" id="start-time">-</div>
         </div>
       </div>
 
       <!-- Historique des alertes -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h6>Historique des alertes</h6>
-        </div>
-        <div class="card-body">
-          <div style="overflow-x: auto;">
-            <table class="alert-table" id="alerts-table">
-              <thead>
-                <tr>
-                  <th>Date/Heure</th>
-                  <th>Type</th>
-                  <th>Niveau (dB)</th>
-                  <th>Durée (s)</th>
-                  <th>Message</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody id="alerts-tbody">
-                <tr>
-                  <td colspan="6" style="text-align: center; color: #6a737d;">Chargement...</td>
-                </tr>
-              </tbody>
-            </table>
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Historique des alertes</h3>
+
+        <!-- Encadré explicatif -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-blue-700 font-medium mb-2">Fonctionnement des alertes email :</p>
+              <ul class="text-sm text-blue-700 space-y-1">
+                <li>📧 <strong>1er email</strong> : Envoyé après <strong>15 secondes</strong> de signal perdu</li>
+                <li>✅ <strong>2e email</strong> : Envoyé quand le signal est <strong>revenu depuis 15 secondes</strong></li>
+                <li>⏱️ <strong>Durée (s)</strong> : Durée <strong>totale</strong> du signal perdu (entre le début de la perte et le retour)</li>
+              </ul>
+            </div>
           </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+              <tr>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Niveau (dBFS)</th>
+                <th class="px-4 py-3">
+                  <div>Durée totale</div>
+                  <div class="text-xs font-normal normal-case text-gray-500">(signal perdu)</div>
+                </th>
+                <th class="px-4 py-3">Message</th>
+                <th class="px-4 py-3">Email</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody" class="divide-y divide-gray-200">
+              <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">Chargement...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- Logs système -->
-      <div class="card mb-4">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <h6>Logs système</h6>
-          <button class="btn btn-secondary btn-sm" onclick="loadLogs()">
-            <i class="material-icons-round" style="font-size: 16px; vertical-align: middle;">refresh</i>
-            Actualiser
-          </button>
-        </div>
-        <div class="card-body">
-          <div class="log-container" id="log-container">
-            Chargement des logs...
-          </div>
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Logs système (100 dernières lignes)</h3>
+
+        <div id="log-container" class="bg-gray-900 text-gray-300 p-4 rounded font-mono text-xs h-96 overflow-y-auto">
+          Chargement des logs...
         </div>
       </div>
-    </div>
-  </main>
 
-  <script src="/static/assets/js/core/popper.min.js"></script>
-  <script src="/static/assets/js/core/bootstrap.min.js"></script>
-  <script src="/static/assets/js/material-dashboard.min.js?v=3.1.0"></script>
+    </main>
+  </div>
 
   <script>
-    let audioChart = null;
+    // Fonction pour récupérer le token CSRF
+    function getCSRFToken() {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.content : '';
+    }
 
+    // =============================================
+    // STATS
+    // =============================================
     async function updateStats() {
         try {
             const response = await fetch('/api/stats');
@@ -370,85 +196,22 @@
             const uptimeSeconds = stats.uptime || 0;
             const hours = Math.floor(uptimeSeconds / 3600);
             const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-            document.getElementById('uptime-display').textContent = hours + 'h ' + minutes + 'm';
+            document.getElementById('uptime').textContent = hours + 'h ' + minutes + 'm';
 
-            document.getElementById('alerts-display').textContent = stats.alerts_sent || 0;
-            document.getElementById('level-display').textContent = (stats.current_level || -100).toFixed(2) + ' dBFS';
+            document.getElementById('total-alerts').textContent = stats.alerts_sent || 0;
+
+            if (stats.start_time) {
+                document.getElementById('start-time').textContent = stats.start_time;
+            }
 
         } catch (error) {
             console.error('Erreur stats:', error);
         }
     }
 
-    async function loadAudioHistory() {
-        try {
-            const response = await fetch('/api/audio/history');
-            const data = await response.json();
-
-            if (data.status === 'success' && data.data) {
-                const history = data.data;
-
-                // Préparer les données pour Chart.js
-                const labels = history.map(d => {
-                    const date = new Date(d.timestamp);
-                    return date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-                });
-
-                const levels = history.map(d => d.level_db);
-
-                // Créer ou mettre à jour le graphique
-                const ctx = document.getElementById('audioChart').getContext('2d');
-
-                if (audioChart) {
-                    audioChart.destroy();
-                }
-
-                audioChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Niveau audio (dBFS)',
-                            data: levels,
-                            borderColor: '#0366d6',
-                            backgroundColor: 'rgba(3, 102, 214, 0.1)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                min: -100,
-                                max: 0,
-                                title: {
-                                    display: true,
-                                    text: 'Niveau (dBFS)'
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    maxTicksLimit: 12
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Erreur historique audio:', error);
-        }
-    }
-
+    // =============================================
+    // HISTORIQUE ALERTES
+    // =============================================
     async function loadAlertsHistory() {
         try {
             const response = await fetch('/api/alerts/history');
@@ -459,7 +222,7 @@
                 const tbody = document.getElementById('alerts-tbody');
 
                 if (alerts.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #6a737d;">Aucune alerte enregistrée</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Aucune alerte enregistrée</td></tr>';
                     return;
                 }
 
@@ -467,17 +230,17 @@
                     const date = new Date(alert.timestamp);
                     const dateStr = date.toLocaleString('fr-FR');
                     const emailBadge = alert.email_sent
-                        ? '<span class="badge badge-success">Envoyé</span>'
-                        : '<span class="badge badge-danger">Non envoyé</span>';
+                        ? '<span class="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">Envoyé</span>'
+                        : '<span class="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">Non envoyé</span>';
 
                     return `
-                        <tr>
-                            <td>${dateStr}</td>
-                            <td><span class="badge badge-danger">${alert.alert_type}</span></td>
-                            <td>${alert.level_db ? alert.level_db.toFixed(2) : '-'}</td>
-                            <td>${alert.duration_seconds || '-'}</td>
-                            <td>${alert.message || '-'}</td>
-                            <td>${emailBadge}</td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">${dateStr}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">${alert.alert_type}</span></td>
+                            <td class="px-4 py-3">${alert.level_db ? alert.level_db.toFixed(2) : '-'}</td>
+                            <td class="px-4 py-3">${alert.duration_seconds || '-'}</td>
+                            <td class="px-4 py-3">${alert.message || '-'}</td>
+                            <td class="px-4 py-3">${emailBadge}</td>
                         </tr>
                     `;
                 }).join('');
@@ -487,6 +250,9 @@
         }
     }
 
+    // =============================================
+    // LOGS
+    // =============================================
     async function loadLogs() {
         try {
             const response = await fetch('/api/logs');
@@ -494,7 +260,7 @@
 
             if (data.logs) {
                 const logContainer = document.getElementById('log-container');
-                const lines = data.logs.split('\n').slice(-100); // Dernières 100 lignes
+                const lines = data.logs.split('\n').slice(-100);
 
                 logContainer.innerHTML = lines.map(line => {
                     let cssClass = 'log-line';
@@ -505,7 +271,6 @@
                     return `<div class="${cssClass}">${line}</div>`;
                 }).join('');
 
-                // Scroll vers le bas
                 logContainer.scrollTop = logContainer.scrollHeight;
             }
         } catch (error) {
@@ -513,35 +278,9 @@
         }
     }
 
-    async function restartMonitoring() {
-        if (!confirm('Êtes-vous sûr de vouloir redémarrer le monitoring ?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/restart', {
-                method: 'POST'
-            });
-
-            const result = await response.json();
-            if (result.status === 'success') {
-                alert('✅ Monitoring redémarré avec succès !');
-                setTimeout(() => location.reload(), 2000);
-            } else {
-                alert('❌ Erreur : ' + result.message);
-            }
-        } catch (error) {
-            alert('❌ Erreur : ' + error);
-        }
-    }
-
-    // Chargement initial
-    updateStats();
-    loadAudioHistory();
-    loadAlertsHistory();
-    loadLogs();
-
-    // Charger et afficher la fréquence dans la sidebar
+    // =============================================
+    // SIDEBAR FREQUENCY
+    // =============================================
     async function updateSidebarFrequency() {
         try {
             const response = await fetch('/api/config/full');
@@ -553,11 +292,16 @@
             console.error('Erreur config sidebar:', error);
         }
     }
+
+    // =============================================
+    // INIT
+    // =============================================
+    updateStats();
+    loadAlertsHistory();
+    loadLogs();
     updateSidebarFrequency();
 
-    // Refresh périodique
     setInterval(updateStats, 5000);
-    setInterval(loadAudioHistory, 30000);
     setInterval(loadAlertsHistory, 60000);
   </script>
 </body>

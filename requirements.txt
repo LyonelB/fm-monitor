@@ -1,4 +1,21 @@
-# Flask==3.0.0
-# numpy==1.24.3
-Flask==3.0.0
-numpy>=1.26.0
+# FM Monitor - Python Dependencies
+# Installation: pip install -r requirements.txt
+
+# Web Framework
+flask==3.0.0
+Werkzeug==3.0.0
+
+# Sécurité
+flask-bcrypt==1.0.1
+Flask-Limiter==3.5.0
+Flask-WTF==1.2.1
+python-dotenv==1.0.0
+
+# Traitement du signal / Audio
+numpy==1.24.3
+
+# RDS Decoding
+redsea==0.18.1
+
+# Utilitaires
+python-dateutil==2.8.2
