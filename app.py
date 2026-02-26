@@ -15,6 +15,7 @@ import os
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
+from license_manager import license_manager, license_required
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -87,12 +88,12 @@ def login():
         if auth.verify_credentials(username, password):
             session['logged_in'] = True
             session['username'] = username
-            
+
             if remember:
                 session.permanent = True
-            
+
             logger.info(f"Connexion réussie pour {username}")
-            
+
             # Réponse JSON pour la nouvelle page
             if request.is_json:
                 next_page = request.args.get('next', '/')
@@ -107,7 +108,7 @@ def login():
                 return redirect(next_page)
         else:
             logger.warning(f"Tentative de connexion échouée pour {username}")
-            
+
             # Réponse JSON pour la nouvelle page
             if request.is_json:
                 return jsonify({
@@ -276,65 +277,65 @@ def save_config():
         with open('config.json', 'r') as f:
             config = json.load(f)
 
-        # Configuration RTL-SDR et station
-        if 'frequency' in data:
-            config['rtl_sdr']['frequency'] = data['frequency']
-            config['station']['frequency'] = data['frequency']
+        # Configuration station
+        if 'station' in data:
+            if 'name' in data['station']:
+                config['station']['name'] = data['station']['name']
+            if 'frequency' in data['station']:
+                config['station']['frequency'] = data['station']['frequency']
+                config['station']['frequency_display'] = data['station']['frequency']
 
-        if 'station_name' in data:
-            config['station']['name'] = data['station_name']
-
-        if 'gain' in data:
-            gain = data['gain'].strip()
-            if gain != 'auto' and gain != '':
-                try:
-                    gain_float = float(gain)
-                    if gain_float < 0 or gain_float > 49.6:
-                        return jsonify({'status': 'error', 'message': 'Le gain doit être entre 0 et 49.6 ou "auto"'}), 400
-                except ValueError:
-                    return jsonify({'status': 'error', 'message': 'Gain invalide'}), 400
-            config['rtl_sdr']['gain'] = gain
+        # Configuration RTL-SDR
+        if 'rtl_sdr' in data:
+            if 'frequency' in data['rtl_sdr']:
+                config['rtl_sdr']['frequency'] = data['rtl_sdr']['frequency']
+            
+            if 'gain' in data['rtl_sdr']:
+                gain = str(data['rtl_sdr']['gain']).strip()
+                if gain == '0':
+                    gain = 'auto'
+                config['rtl_sdr']['gain'] = gain
+                logger.info(f"Gain modifié: {gain}")
 
         # Configuration audio
-        if 'silence_threshold' in data:
-            config['audio']['silence_threshold'] = float(data['silence_threshold'])
-
-        if 'silence_duration' in data:
-            config['audio']['silence_duration'] = int(data['silence_duration'])
+        if 'audio' in data:
+            if 'silence_threshold' in data['audio']:
+                config['audio']['silence_threshold'] = float(data['audio']['silence_threshold'])
+            if 'silence_duration' in data['audio']:
+                config['audio']['silence_duration'] = int(data['audio']['silence_duration'])
 
         # Configuration email
-        if 'sender_email' in data:
-            config['email']['sender_email'] = data['sender_email']
-
-        if 'sender_password' in data:
-            config['email']['sender_password'] = data['sender_password']
-
-        if 'recipient_emails' in data:
-            emails = data['recipient_emails']
-            if isinstance(emails, str):
-                emails = [e.strip() for e in emails.split(',') if e.strip()]
-            config['email']['recipient_emails'] = emails
+        if 'email' in data:
+            if 'sender_email' in data['email']:
+                config['email']['sender_email'] = data['email']['sender_email']
+            if 'sender_password' in data['email']:
+                config['email']['sender_password'] = data['email']['sender_password']
+            if 'recipient_emails' in data['email']:
+                emails = data['email']['recipient_emails']
+                if isinstance(emails, str):
+                    emails = [e.strip() for e in emails.split(',') if e.strip()]
+                config['email']['recipient_emails'] = emails
 
         # Configuration des identifiants de connexion (avec Bcrypt)
         if 'auth' in data:
             if 'auth' not in config:
                 config['auth'] = {}
-            
+
             auth_data = data['auth']
-            
+
             # Modifier le nom d'utilisateur si fourni
             if 'username' in auth_data and auth_data['username']:
                 old_username = config['auth'].get('username', 'unknown')
                 config['auth']['username'] = auth_data['username']
                 logger.info(f"Nom d'utilisateur modifié: {old_username} → {auth_data['username']}")
-            
+
             # Modifier le mot de passe si fourni (hashage avec Bcrypt)
             if 'password' in auth_data and auth_data['password']:
                 # Hasher le mot de passe avec Bcrypt (SÉCURISÉ)
                 password_hash = bcrypt.generate_password_hash(auth_data['password']).decode('utf-8')
                 config['auth']['password_hash'] = password_hash
                 logger.info("Mot de passe modifié et hashé avec Bcrypt")
-                
+
                 # Recharger l'instance Auth avec les nouveaux identifiants
                 global auth
                 auth = Auth()
@@ -351,7 +352,12 @@ def save_config():
             config['network']['gateway'] = network_data.get('gateway', '')
             config['network']['dns'] = network_data.get('dns', '')
             config['network']['wifi_ssid'] = network_data.get('wifi_ssid', '')
-            config['network']['wifi_password'] = network_data.get('wifi_password', '')
+            
+            # Ne pas écraser le mot de passe WiFi s'il est vide (sécurité)
+            wifi_password = network_data.get('wifi_password', '')
+            if wifi_password and wifi_password.strip():
+                config['network']['wifi_password'] = wifi_password
+                logger.info("Mot de passe WiFi mis à jour")
 
         # Sauvegarder le fichier config.json
         with open('config.json', 'w') as f:
@@ -460,6 +466,18 @@ def get_alerts_history():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/alerts/history/grouped')
+@auth.login_required
+def get_alerts_history_grouped():
+    """Récupère l'historique des alertes groupées par paires"""
+    try:
+        if monitor and hasattr(monitor, 'db'):
+            alerts = monitor.db.get_alerts_history_grouped(limit=50)
+            return jsonify({'status': 'success', 'data': alerts})
+        return jsonify({'status': 'error', 'message': 'Database not available'}), 503
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/api/restart', methods=['POST'])
 @auth.login_required
 def restart_monitoring():
@@ -500,6 +518,51 @@ def read_rds_rt():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# =============================================
+# ROUTES DE LICENCE (Lite/Full)
+# =============================================
+
+@app.route('/license')
+@auth.login_required
+def license_page():
+    """Page de gestion de la licence"""
+    return render_template('license.html')
+
+@app.route('/api/license/status')
+@auth.login_required
+def get_license_status():
+    """Retourne le statut de la licence"""
+    return jsonify(license_manager.get_license_status())
+
+@app.route('/api/license/activate', methods=['POST'])
+@auth.login_required
+def activate_license():
+    """Active une licence"""
+    data = request.json
+    license_key = data.get('license_key')
+    email = data.get('email')
+
+    if not license_key:
+        return jsonify({'status': 'error', 'message': 'Clé manquante'}), 400
+
+    success, message = license_manager.activate_license(license_key, email)
+
+    if success:
+        return jsonify({'status': 'success', 'message': message})
+    else:
+        return jsonify({'status': 'error', 'message': message}), 400
+
+@app.route('/api/license/features')
+@auth.login_required
+def get_features():
+    """Retourne les fonctionnalités disponibles"""
+    features = license_manager.get_available_features()
+    return jsonify({
+        'status': 'success',
+        'features': features,
+        'is_full': license_manager.is_full()
+    })
+
 if __name__ == '__main__':
     try:
         monitor = FMMonitor('config.json')
@@ -509,7 +572,7 @@ if __name__ == '__main__':
         ssl_context = None
         cert_file = 'cert.pem'
         key_file = 'key.pem'
-        
+
         if os.path.exists(cert_file) and os.path.exists(key_file):
             ssl_context = (cert_file, key_file)
             logger.info("✅ Certificats SSL détectés - HTTPS activé")
@@ -518,11 +581,11 @@ if __name__ == '__main__':
             logger.info("⚠️  Certificats SSL non trouvés - HTTP non sécurisé")
             logger.info("   Pour activer HTTPS, générez les certificats avec: ./generate_ssl.sh")
             logger.info(f"Démarrage du serveur Flask en HTTP sur http://0.0.0.0:5000")
-        
+
         app.run(
-            host='0.0.0.0', 
-            port=5000, 
-            debug=False, 
+            host='0.0.0.0',
+            port=5000,
+            debug=False,
             threaded=True,
             ssl_context=ssl_context
         )

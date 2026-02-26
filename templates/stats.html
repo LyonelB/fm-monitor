@@ -146,15 +146,12 @@
           <table class="w-full text-sm text-left">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
               <tr>
-                <th class="px-4 py-3">Date</th>
-                <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Niveau (dBFS)</th>
-                <th class="px-4 py-3">
-                  <div>Durée totale</div>
-                  <div class="text-xs font-normal normal-case text-gray-500">(signal perdu)</div>
-                </th>
-                <th class="px-4 py-3">Message</th>
-                <th class="px-4 py-3">Email</th>
+                <th class="px-4 py-3">Date début</th>
+                <th class="px-4 py-3">Heure début → Fin</th>
+                <th class="px-4 py-3">Durée (s)</th>
+                <th class="px-4 py-3">Niveau perte / retour</th>
+                <th class="px-4 py-3">Statut</th>
+                <th class="px-4 py-3">Emails</th>
               </tr>
             </thead>
             <tbody id="alerts-tbody" class="divide-y divide-gray-200">
@@ -210,11 +207,11 @@
     }
 
     // =============================================
-    // HISTORIQUE ALERTES
+    // HISTORIQUE ALERTES (GROUPÉES)
     // =============================================
     async function loadAlertsHistory() {
         try {
-            const response = await fetch('/api/alerts/history');
+            const response = await fetch('/api/alerts/history/grouped');
             const data = await response.json();
 
             if (data.status === 'success' && data.data) {
@@ -227,26 +224,55 @@
                 }
 
                 tbody.innerHTML = alerts.map(alert => {
-                    const date = new Date(alert.timestamp);
-                    const dateStr = date.toLocaleString('fr-FR');
-                    const emailBadge = alert.email_sent
-                        ? '<span class="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">Envoyé</span>'
-                        : '<span class="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">Non envoyé</span>';
+                    const startDate = new Date(alert.start_time);
+                    const dateStr = startDate.toLocaleDateString('fr-FR');
+                    const startTime = startDate.toLocaleTimeString('fr-FR');
+                    
+                    let timeRange = startTime;
+                    let statusBadge = '';
+                    let emailInfo = '';
+                    
+                    if (alert.status === 'complete') {
+                        // Perte puis rétablissement
+                        const endDate = new Date(alert.end_time);
+                        const endTime = endDate.toLocaleTimeString('fr-FR');
+                        timeRange = `${startTime} → ${endTime}`;
+                        statusBadge = '<span class="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">✓ Rétabli</span>';
+                        emailInfo = `<span class="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">${alert.emails_sent} email(s)</span>`;
+                    } else if (alert.status === 'ongoing') {
+                        // Perte en cours (pas encore rétabli)
+                        timeRange = `${startTime} → <span class="text-red-600">en cours</span>`;
+                        statusBadge = '<span class="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">✗ Signal perdu</span>';
+                        emailInfo = `<span class="px-2 py-1 text-xs font-medium rounded bg-yellow-100 text-yellow-800">${alert.emails_sent} email</span>`;
+                    } else {
+                        // Cas rare : restored_only
+                        timeRange = startTime;
+                        statusBadge = '<span class="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800">Rétabli seul</span>';
+                        emailInfo = `<span class="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800">${alert.emails_sent} email</span>`;
+                    }
+                    
+                    const levelLost = alert.level_lost ? alert.level_lost.toFixed(2) : '-';
+                    const levelRestored = alert.level_restored ? alert.level_restored.toFixed(2) : '-';
+                    const levelDisplay = alert.status === 'complete' 
+                        ? `<span class="text-red-600">${levelLost}</span> / <span class="text-green-600">${levelRestored}</span>`
+                        : `<span class="text-red-600">${levelLost}</span>`;
 
                     return `
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3">${dateStr}</td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-800">${alert.alert_type}</span></td>
-                            <td class="px-4 py-3">${alert.level_db ? alert.level_db.toFixed(2) : '-'}</td>
-                            <td class="px-4 py-3">${alert.duration_seconds || '-'}</td>
-                            <td class="px-4 py-3">${alert.message || '-'}</td>
-                            <td class="px-4 py-3">${emailBadge}</td>
+                            <td class="px-4 py-3 font-medium">${dateStr}</td>
+                            <td class="px-4 py-3 font-mono text-xs">${timeRange}</td>
+                            <td class="px-4 py-3 font-semibold">${alert.duration}s</td>
+                            <td class="px-4 py-3">${levelDisplay} dB</td>
+                            <td class="px-4 py-3">${statusBadge}</td>
+                            <td class="px-4 py-3">${emailInfo}</td>
                         </tr>
                     `;
                 }).join('');
             }
         } catch (error) {
             console.error('Erreur historique alertes:', error);
+            document.getElementById('alerts-tbody').innerHTML = 
+                '<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">Erreur de chargement</td></tr>';
         }
     }
 

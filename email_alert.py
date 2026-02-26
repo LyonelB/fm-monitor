@@ -18,40 +18,55 @@ class EmailAlert:
         """Initialise le système d'alertes email"""
         with open(config_path, 'r') as f:
             config = json.load(f)
-        
+
         self.config = config['email']
         self.station_name = config['station']['name']
         self.frequency = config['station']['frequency_display']
-        
+
         self.last_alert_time = None
-        self.cooldown = timedelta(minutes=self.config.get('cooldown_minutes', 30))
-        
+        self.cooldown = timedelta(minutes=self.config.get('cooldown_minutes', 1))  # 1 minute par défaut
+
     def can_send_alert(self):
         """Vérifie si on peut envoyer une alerte (cooldown)"""
         if not self.config['enabled']:
             return False
-            
+
         if self.last_alert_time is None:
             return True
-            
+
         return datetime.now() - self.last_alert_time > self.cooldown
-    
-    def send_alert(self, alert_type, details=""):
-        """Envoie une alerte email"""
-        if not self.can_send_alert():
+
+    def send_alert(self, alert_type, details="", skip_cooldown=False):
+        """Envoie une alerte email
+        
+        Args:
+            alert_type: Type d'alerte
+            details: Détails de l'alerte
+            skip_cooldown: Si True, ignore le cooldown (pour les rétablissements)
+        """
+        # Ignorer le cooldown si c'est un rétablissement OU si skip_cooldown=True
+        if "rétabli" in alert_type.lower() or skip_cooldown:
+            logger.info(f"Envoi de l'alerte '{alert_type}' (cooldown ignoré)")
+        elif not self.can_send_alert():
             logger.info("Alerte non envoyée (cooldown actif)")
             return False
-        
+
         try:
             # Créer le message
             msg = MIMEMultipart('alternative')
-            msg['Subject'] = f"⚠️ ALERTE - {self.station_name} - {alert_type}"
+            
+            # Sujet différent selon le type d'alerte
+            if "rétabli" in alert_type.lower():
+                msg['Subject'] = f"✅ RÉTABLI - {self.station_name} - {alert_type}"
+            else:
+                msg['Subject'] = f"⚠️ ALERTE - {self.station_name} - {alert_type}"
+                
             msg['From'] = self.config['sender_email']
             msg['To'] = ', '.join(self.config['recipient_emails'])
-            
+
             # Corps du message
             timestamp = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-            
+
             text_content = f"""
 ALERTE DE SURVEILLANCE FM
 ========================
@@ -67,19 +82,19 @@ Détails:
 ---
 Système de surveillance FM - RTL-SDR
             """
-            
+
             html_content = f"""
             <html>
             <head>
                 <style>
                     body {{ font-family: Arial, sans-serif; }}
-                    .alert-box {{ 
-                        background-color: #fff3cd; 
-                        border-left: 4px solid #ffc107; 
-                        padding: 20px; 
+                    .alert-box {{
+                        background-color: {"#d4edda" if "rétabli" in alert_type.lower() else "#fff3cd"};
+                        border-left: 4px solid {"#28a745" if "rétabli" in alert_type.lower() else "#ffc107"};
+                        padding: 20px;
                         margin: 20px 0;
                     }}
-                    .header {{ color: #856404; font-size: 24px; font-weight: bold; }}
+                    .header {{ color: {"#155724" if "rétabli" in alert_type.lower() else "#856404"}; font-size: 24px; font-weight: bold; }}
                     .info {{ margin: 10px 0; }}
                     .label {{ font-weight: bold; color: #333; }}
                     .footer {{ margin-top: 20px; color: #666; font-size: 12px; }}
@@ -87,7 +102,7 @@ Système de surveillance FM - RTL-SDR
             </head>
             <body>
                 <div class="alert-box">
-                    <div class="header">⚠️ ALERTE DE SURVEILLANCE FM</div>
+                    <div class="header">{"✅" if "rétabli" in alert_type.lower() else "⚠️"} {alert_type.upper()}</div>
                     <hr>
                     <div class="info"><span class="label">Station:</span> {self.station_name}</div>
                     <div class="info"><span class="label">Fréquence:</span> {self.frequency}</div>
@@ -100,29 +115,29 @@ Système de surveillance FM - RTL-SDR
             </body>
             </html>
             """
-            
+
             # Attacher les deux versions
             part1 = MIMEText(text_content, 'plain', 'utf-8')
             part2 = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(part1)
             msg.attach(part2)
-            
+
             # Envoyer l'email
             with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
                 if self.config['use_tls']:
                     server.starttls()
-                
+
                 server.login(self.config['sender_email'], self.config['sender_password'])
                 server.send_message(msg)
-            
+
             self.last_alert_time = datetime.now()
             logger.info(f"Alerte email envoyée: {alert_type}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'envoi de l'email: {e}")
             return False
-    
+
     def send_recovery_alert(self):
         """Envoie une alerte de rétablissement du signal"""
         try:
@@ -130,9 +145,9 @@ Système de surveillance FM - RTL-SDR
             msg['Subject'] = f"✅ RÉTABLI - {self.station_name}"
             msg['From'] = self.config['sender_email']
             msg['To'] = ', '.join(self.config['recipient_emails'])
-            
+
             timestamp = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-            
+
             text_content = f"""
 SIGNAL RÉTABLI
 ==============
@@ -146,16 +161,16 @@ Le signal FM a été rétabli avec succès.
 ---
 Système de surveillance FM - RTL-SDR
             """
-            
+
             html_content = f"""
             <html>
             <head>
                 <style>
                     body {{ font-family: Arial, sans-serif; }}
-                    .success-box {{ 
-                        background-color: #d4edda; 
-                        border-left: 4px solid #28a745; 
-                        padding: 20px; 
+                    .success-box {{
+                        background-color: #d4edda;
+                        border-left: 4px solid #28a745;
+                        padding: 20px;
                         margin: 20px 0;
                     }}
                     .header {{ color: #155724; font-size: 24px; font-weight: bold; }}
@@ -178,22 +193,22 @@ Système de surveillance FM - RTL-SDR
             </body>
             </html>
             """
-            
+
             part1 = MIMEText(text_content, 'plain', 'utf-8')
             part2 = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(part1)
             msg.attach(part2)
-            
+
             with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
                 if self.config['use_tls']:
                     server.starttls()
-                
+
                 server.login(self.config['sender_email'], self.config['sender_password'])
                 server.send_message(msg)
-            
+
             logger.info("Alerte de rétablissement envoyée")
             return True
-            
+
         except Exception as e:
             logger.error(f"Erreur lors de l'envoi de l'alerte de rétablissement: {e}")
             return False

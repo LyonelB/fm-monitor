@@ -1,57 +1,34 @@
-# FM Monitor - .gitignore
+# Configuration sensible
+config.json
+*.backup
+*.old
 
-# Environnement Python
+# Environnement virtuel Python
 venv/
 env/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
+*.pyo
+*.pyd
 
-# Variables d'environnement (IMPORTANT - contient SECRET_KEY)
-.env
-
-# Configuration locale (contient mots de passe, emails)
-config.json
-
-# Certificats SSL (générés localement)
-cert.pem
-key.pem
-*.crt
-*.key
-*.pem
+# Base de données
+fm_monitor.db
+fm_monitor.db-journal
 
 # Logs
 *.log
-logs/
+/tmp/
 
-# Fichiers système
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Certificats SSL
+*.key
+*.crt
+*.pem
+
+# Fichiers temporaires
 *.swp
 *.swo
 *~
+.DS_Store
 
 # IDE
 .vscode/
@@ -59,36 +36,17 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
-# Sauvegardes
-backups/
-backup_*/
-*.backup
-*.bak
-*_backup_*
+# Système
+.directory
+Thumbs.db
 
-# Fichiers temporaires
-tmp/
-temp/
-*.tmp
+# Fichiers de développement
+test_*.py
+debug.py
 
-# Audio (fichiers de cache)
-*.wav
-*.mp3
-audio_cache/
+# Fichiers RDS temporaires
+/tmp/rds_output.json
 
-# Données utilisateur
-user_data/
-uploads/
-
-# Tests
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Documentation build
-docs/_build/
-site/
-
-# Fichiers spécifiques RTL-SDR
-rtl_*.bin
+# Fichiers de sauvegarde réseau
+/etc/dhcpcd.conf.backup
+/etc/wpa_supplicant/wpa_supplicant.conf.backup

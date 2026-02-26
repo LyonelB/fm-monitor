@@ -276,7 +276,7 @@ class FMMonitor:
 
                 # Le calcul du niveau se fait TOUJOURS (nécessaire pour "Niveau actuel")
                 # Le flag vu_meter_enabled contrôle seulement l'affichage du VU-mètre visuel
-                
+
                 try:
                     samples = np.frombuffer(chunk, dtype=np.int16)
 
@@ -365,7 +365,7 @@ class FMMonitor:
                     with self.stats_lock:
                         if 'ps' in data:
                             self.stats['ps'] = data['ps']
-                        
+
                         if 'pi' in data:
                             self.stats['pi'] = data['pi']
 
@@ -427,7 +427,7 @@ class FMMonitor:
                                 self.stats['ps'] = data['ps'].strip()
                                 ps_found = True
                                 logger.info(f"PS trouvé: {self.stats['ps']}")
-                            
+
                             if 'pi' in data and not pi_found:
                                 self.stats['pi'] = data['pi']
                                 pi_found = True
@@ -472,11 +472,14 @@ class FMMonitor:
                 threshold = self.audio_config['silence_threshold']
 
                 if current_level < threshold:
+                    # Signal faible
                     if self.signal_ok:
+                        # Début de la perte de signal
                         self.signal_ok = False
                         self.silence_start_time = time.time()
                         logger.warning(f"Signal faible détecté: {current_level:.2f} dB")
                     else:
+                        # Signal toujours faible - vérifier la durée
                         silence_duration = time.time() - self.silence_start_time
 
                         if silence_duration >= self.audio_config['silence_duration'] and not self.alert_sent:
@@ -501,9 +504,29 @@ class FMMonitor:
                                     email_sent=True
                                 )
                 else:
+                    # Signal au-dessus du seuil
                     if not self.signal_ok:
-                        logger.info(f"Signal rétabli: {current_level:.2f} dB")
+                        # Signal rétabli !
+                        total_duration = time.time() - self.silence_start_time if self.silence_start_time else 0
+                        logger.info(f"Signal rétabli: {current_level:.2f} dB après {total_duration:.0f}s")
+                        
+                        # Envoyer email de rétablissement SI une alerte avait été envoyée
+                        if self.alert_sent:
+                            success = self.email_alert.send_alert(
+                                alert_type="Signal FM rétabli",
+                                details=f"Niveau: {current_level:.2f} dB, Durée totale de la perte: {int(total_duration)}s"
+                            )
+                            
+                            if success:
+                                self.db.save_alert(
+                                    alert_type='signal_restored',
+                                    level_db=current_level,
+                                    duration_seconds=int(total_duration),
+                                    message=f"Signal rétabli - {current_level:.2f} dB",
+                                    email_sent=True
+                                )
 
+                    # Réinitialiser l'état
                     self.signal_ok = True
                     self.silence_start_time = None
                     self.alert_sent = False

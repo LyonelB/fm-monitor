@@ -157,6 +157,81 @@ class FMDatabase:
             logger.error(f"Erreur récupération alertes: {e}")
             return []
     
+    def get_alerts_history_grouped(self, limit=50):
+        """Récupère l'historique des alertes regroupées par paires (perte + retour)"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Récupérer toutes les alertes
+                cursor.execute('''
+                    SELECT timestamp, alert_type, level_db, duration_seconds, message, email_sent
+                    FROM alerts
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                ''', (limit * 2,))  # Doubler la limite car on regroupe
+                
+                alerts = [dict(row) for row in cursor.fetchall()]
+                
+                # Regrouper les alertes par paires
+                grouped = []
+                i = 0
+                
+                while i < len(alerts):
+                    alert = alerts[i]
+                    
+                    if alert['alert_type'] == 'signal_restored':
+                        # Chercher le signal_lost correspondant (juste après dans la liste inversée)
+                        signal_lost = None
+                        if i + 1 < len(alerts) and alerts[i + 1]['alert_type'] == 'signal_lost':
+                            signal_lost = alerts[i + 1]
+                            i += 2  # Sauter les deux
+                        else:
+                            # Pas de signal_lost trouvé, afficher quand même le restored seul
+                            grouped.append({
+                                'start_time': alert['timestamp'],
+                                'end_time': alert['timestamp'],
+                                'duration': alert['duration_seconds'] or 0,
+                                'level_lost': alert['level_db'],
+                                'level_restored': alert['level_db'],
+                                'emails_sent': 1 if alert['email_sent'] else 0,
+                                'status': 'restored_only'
+                            })
+                            i += 1
+                            continue
+                        
+                        # Créer l'entrée groupée
+                        grouped.append({
+                            'start_time': signal_lost['timestamp'],
+                            'end_time': alert['timestamp'],
+                            'duration': alert['duration_seconds'] or signal_lost['duration_seconds'] or 0,
+                            'level_lost': signal_lost['level_db'],
+                            'level_restored': alert['level_db'],
+                            'emails_sent': (1 if signal_lost['email_sent'] else 0) + (1 if alert['email_sent'] else 0),
+                            'status': 'complete'
+                        })
+                    
+                    elif alert['alert_type'] == 'signal_lost':
+                        # Signal perdu sans rétablissement (encore en cours ou pas de restored)
+                        grouped.append({
+                            'start_time': alert['timestamp'],
+                            'end_time': None,
+                            'duration': alert['duration_seconds'] or 0,
+                            'level_lost': alert['level_db'],
+                            'level_restored': None,
+                            'emails_sent': 1 if alert['email_sent'] else 0,
+                            'status': 'ongoing'
+                        })
+                        i += 1
+                    else:
+                        i += 1
+                
+                return grouped[:limit]  # Limiter au nombre demandé
+                
+        except Exception as e:
+            logger.error(f"Erreur récupération alertes groupées: {e}")
+            return []
+    
     def cleanup_old_data(self, days=7):
         """Nettoie les données de plus de X jours"""
         try:
