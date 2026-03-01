@@ -51,7 +51,6 @@ class FMMonitor:
             'current_level': -100.0,
             'ps': '-',
             'rt': '-',
-            'pi': '-',
             'status': 'Arrêté'
         }
 
@@ -71,9 +70,9 @@ class FMMonitor:
         # =============================================
         self.vu_meter_enabled = True      # Calcul RMS et affichage VU-mètre
         self.audio_enabled = True          # Streaming audio (player)
-        self.watchdog_enabled = False       # Watchdog auto-relance rtl_fm
+        self.watchdog_enabled = True       # Watchdog auto-relance rtl_fm
         self.rds_enabled = False           # Lecteur RDS automatique (désactivé par défaut)
-        self.history_enabled = False        # Enregistrement historique audio 24h
+        self.history_enabled = True        # Enregistrement historique audio 24h
 
         # Queue pour sauvegarde BDD non-bloquante
         self.db_queue = queue.Queue(maxsize=100)
@@ -247,9 +246,10 @@ class FMMonitor:
             f"-p {self.rtl_config['ppm_error']} "
             f"-A fast | "
             f"tee >(stdbuf -oL redsea -p > /tmp/rds_output.json) | "
-            f"tee >(sox -t raw -r {sample_rate} -e signed -b 16 -c 1 - "
-            f"-t mp3 -r {self.audio_config['output_rate']} -C 128 - "
-            f"> /tmp/fm_stream.mp3) | cat"
+            f"tee >(ffmpeg -f s16le -ar {sample_rate} -ac 1 -i - "
+            f"-codec:a libmp3lame -b:a 128k -ar {self.audio_config['output_rate']} -ac 2 "
+            f"-content_type audio/mpeg -f mp3 "
+            f"icecast://source:fmmonitor2026@localhost:8000/fmmonitor 2>/dev/null) | cat"
         )
 
         logger.info("Lancement du processus maître rtl_fm 171k avec tee (RDS+Audio+RMS)")
@@ -274,8 +274,10 @@ class FMMonitor:
                 if not chunk:
                     break
 
-                # Le calcul du niveau se fait TOUJOURS (nécessaire pour "Niveau actuel")
-                # Le flag vu_meter_enabled contrôle seulement l'affichage du VU-mètre visuel
+                # VU-mètre désactivé : on lit quand même le stdout pour ne pas bloquer rtl_fm
+                # mais on ne calcule pas le RMS
+                if not self.vu_meter_enabled:
+                    continue
 
                 try:
                     samples = np.frombuffer(chunk, dtype=np.int16)
@@ -366,9 +368,6 @@ class FMMonitor:
                         if 'ps' in data:
                             self.stats['ps'] = data['ps']
 
-                        if 'pi' in data:
-                            self.stats['pi'] = data['pi']
-
                         if 'partial_radiotext' in data:
                             rt_segment = data['partial_radiotext'].strip()
                             rt_ab = data.get('rt_ab', 'A')
@@ -402,7 +401,6 @@ class FMMonitor:
 
             ps_found = False
             rt_found = False
-            pi_found = False
             start_time = time.time()
 
             proc = subprocess.Popen(
@@ -428,11 +426,6 @@ class FMMonitor:
                                 ps_found = True
                                 logger.info(f"PS trouvé: {self.stats['ps']}")
 
-                            if 'pi' in data and not pi_found:
-                                self.stats['pi'] = data['pi']
-                                pi_found = True
-                                logger.info(f"PI Code trouvé: {self.stats['pi']}")
-
                             if 'partial_radiotext' in data:
                                 rt_segment = data['partial_radiotext'].strip()
                                 if rt_segment and len(rt_segment) > len(self.stats.get('rt', '')):
@@ -440,8 +433,8 @@ class FMMonitor:
                                     rt_found = True
                                     logger.info(f"RT trouvé: {rt_segment}")
 
-                            if ps_found and rt_found and pi_found:
-                                logger.info("PS, RT et PI trouvés, arrêt anticipé")
+                            if ps_found and rt_found:
+                                logger.info("PS et RT trouvés, arrêt anticipé")
                                 break
 
                         except json.JSONDecodeError:
@@ -472,14 +465,11 @@ class FMMonitor:
                 threshold = self.audio_config['silence_threshold']
 
                 if current_level < threshold:
-                    # Signal faible
                     if self.signal_ok:
-                        # Début de la perte de signal
                         self.signal_ok = False
                         self.silence_start_time = time.time()
                         logger.warning(f"Signal faible détecté: {current_level:.2f} dB")
                     else:
-                        # Signal toujours faible - vérifier la durée
                         silence_duration = time.time() - self.silence_start_time
 
                         if silence_duration >= self.audio_config['silence_duration'] and not self.alert_sent:
@@ -504,29 +494,9 @@ class FMMonitor:
                                     email_sent=True
                                 )
                 else:
-                    # Signal au-dessus du seuil
                     if not self.signal_ok:
-                        # Signal rétabli !
-                        total_duration = time.time() - self.silence_start_time if self.silence_start_time else 0
-                        logger.info(f"Signal rétabli: {current_level:.2f} dB après {total_duration:.0f}s")
-                        
-                        # Envoyer email de rétablissement SI une alerte avait été envoyée
-                        if self.alert_sent:
-                            success = self.email_alert.send_alert(
-                                alert_type="Signal FM rétabli",
-                                details=f"Niveau: {current_level:.2f} dB, Durée totale de la perte: {int(total_duration)}s"
-                            )
-                            
-                            if success:
-                                self.db.save_alert(
-                                    alert_type='signal_restored',
-                                    level_db=current_level,
-                                    duration_seconds=int(total_duration),
-                                    message=f"Signal rétabli - {current_level:.2f} dB",
-                                    email_sent=True
-                                )
+                        logger.info(f"Signal rétabli: {current_level:.2f} dB")
 
-                    # Réinitialiser l'état
                     self.signal_ok = True
                     self.silence_start_time = None
                     self.alert_sent = False
@@ -575,6 +545,7 @@ class FMMonitor:
 
         os.system("pkill -9 rtl_fm 2>/dev/null")
         os.system("pkill -9 sox 2>/dev/null")
+        os.system("pkill -9 ffmpeg 2>/dev/null")
         os.system("pkill -9 redsea 2>/dev/null")
 
         # Supprimer le FIFO

@@ -1,7 +1,23 @@
 # Configuration sensible
 config.json
+.env
+
+# Système de licences (SENSIBLE - NE JAMAIS PUBLIER)
+license.json
+licenses_db.json
+generated_licenses.json
+generate_license.py
+license_manager.py
+*_license*.py
+license_*.backup
+
+# Backups
 *.backup
 *.old
+*.bak
+app.py.before_*
+monitor.py.before_*
+network_apply.log
 
 # Environnement virtuel Python
 venv/
@@ -12,17 +28,21 @@ __pycache__/
 *.pyd
 
 # Base de données
-fm_monitor.db
-fm_monitor.db-journal
+*.db
+*.db-journal
+fm_monitor.db*
 
 # Logs
 *.log
+logs/
 /tmp/
 
 # Certificats SSL
 *.key
 *.crt
 *.pem
+cert.*
+key.*
 
 # Fichiers temporaires
 *.swp
@@ -40,9 +60,13 @@ fm_monitor.db-journal
 .directory
 Thumbs.db
 
-# Fichiers de développement
+# Fichiers de développement et tests
 test_*.py
 debug.py
+migrate_*.py
+activate_*.py
+add_*.py
+add_*.sh
 
 # Fichiers RDS temporaires
 /tmp/rds_output.json
@@ -50,3 +74,10 @@ debug.py
 # Fichiers de sauvegarde réseau
 /etc/dhcpcd.conf.backup
 /etc/wpa_supplicant/wpa_supplicant.conf.backup
+
+# Backups de templates
+templates_backup_*
+{templates,static
+
+# Scripts temporaires de migration
+*_to_icecast.py

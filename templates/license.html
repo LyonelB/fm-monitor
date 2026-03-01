@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Licence - FM Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -62,6 +61,15 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
             Licence
+            <span class="ml-auto px-2 py-0.5 text-xs rounded-full bg-blue-600 text-white">Upgrade</span>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            À propos
           </a>
         </li>
       </ul>
@@ -82,290 +90,319 @@
     <!-- Header -->
     <header class="sticky top-0 z-40 flex w-full bg-white shadow-sm">
       <div class="flex flex-grow items-center justify-between py-4 px-4 md:px-6 2xl:px-11">
-        <h1 class="text-2xl font-semibold text-gray-900">Gestion de la licence</h1>
+        <h1 class="text-2xl font-semibold text-gray-900">Gestion de licence</h1>
       </div>
     </header>
 
     <!-- Main -->
     <main class="p-4 md:p-6 2xl:p-10">
-
-      <!-- Badge de statut -->
-      <div class="mb-6" id="status-badge">
-        <!-- Rempli dynamiquement -->
-      </div>
-
-      <!-- Messages -->
-      <div id="success-message" class="hidden mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
-        <div class="flex">
-          <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
-          <p class="ml-3 text-sm text-green-700" id="success-text"></p>
+      
+      <!-- Statut actuel -->
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">📋 Statut de votre licence</h2>
+        
+        <div id="license-status" class="space-y-4">
+          <!-- Rempli dynamiquement -->
         </div>
       </div>
 
-      <div id="error-message" class="hidden mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
-        <div class="flex">
-          <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-          </svg>
-          <p class="ml-3 text-sm text-red-700" id="error-text"></p>
+      <!-- Comparatif des versions -->
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">📊 Comparatif des versions</h2>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fonctionnalité</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Lite (Gratuit)</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Full Trial (30j)</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Full Permanent</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr>
+                <td class="px-6 py-4 text-sm text-gray-900">Streaming audio MP3</td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr>
+                <td class="px-6 py-4 text-sm text-gray-900">VU-mètre temps réel</td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr class="bg-blue-50">
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">Décodage RDS (PS, RT, PI)</td>
+                <td class="px-6 py-4 text-center"><span class="text-red-600 text-xl">✗</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr class="bg-blue-50">
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">Alertes email intelligentes</td>
+                <td class="px-6 py-4 text-center"><span class="text-red-600 text-xl">✗</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr class="bg-blue-50">
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">Statistiques et historique</td>
+                <td class="px-6 py-4 text-center"><span class="text-red-600 text-xl">✗</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr class="bg-blue-50">
+                <td class="px-6 py-4 text-sm text-gray-900 font-medium">Configuration réseau (WiFi, IP)</td>
+                <td class="px-6 py-4 text-center"><span class="text-red-600 text-xl">✗</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+                <td class="px-6 py-4 text-center"><span class="text-green-600 text-xl">✓</span></td>
+              </tr>
+              <tr class="bg-gray-50">
+                <td class="px-6 py-4 text-sm text-gray-900 font-bold">Prix</td>
+                <td class="px-6 py-4 text-center text-green-600 font-bold">GRATUIT</td>
+                <td class="px-6 py-4 text-center text-blue-600 font-bold">GRATUIT<br><span class="text-xs">(sur demande)</span></td>
+                <td class="px-6 py-4 text-center text-purple-600 font-bold">199€<br><span class="text-xs">one-time</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Carte d'activation -->
-      <div class="rounded bg-white p-6 shadow mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Activer une licence Full</h3>
-
-        <form id="activation-form">
+      <!-- Activation -->
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">🔐 Activer une licence</h2>
+        
+        <div class="max-w-2xl">
+          <!-- Messages -->
+          <div id="activation-message" class="hidden mb-4 rounded p-4"></div>
+          
+          <!-- Formulaire -->
           <div class="mb-4">
-            <label for="license_key" class="block text-sm font-medium text-gray-700 mb-2">
-              Clé de licence
-            </label>
-            <input
-              type="text"
-              id="license_key"
-              name="license_key"
-              placeholder="FMMON-XXXXX-XXXXX-XXXXX-XXXXX"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              required
-            >
-            <p class="mt-1 text-xs text-gray-500">Format: FMMON-XXXXX-XXXXX-XXXXX-XXXXX</p>
-          </div>
-
-          <div class="mb-6">
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-              Email (optionnel)
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
+            <label class="block text-sm font-semibold text-gray-900 mb-2">Votre adresse email</label>
+            <input 
+              type="email" 
+              id="license-email" 
               placeholder="votre@email.com"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              class="w-full rounded border-gray-300 border px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
             >
-            <p class="mt-1 text-xs text-gray-500">Si la licence est associée à un email</p>
+            <p class="mt-2 text-xs text-gray-600">
+              L'email associé à votre licence (fourni lors de l'achat/demande)
+            </p>
           </div>
 
-          <button
-            type="submit"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
+          <div class="mb-4">
+            <label class="block text-sm font-semibold text-gray-900 mb-2">Clé de licence</label>
+            <input 
+              type="text" 
+              id="license-key" 
+              placeholder="TRIAL-20260226-A1B2C3D4-ABC123DEF456"
+              required
+              class="w-full rounded border-gray-300 border px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            >
+            <p class="mt-2 text-xs text-gray-600">
+              <strong>Trial :</strong> Demandez une clé Trial gratuite à <a href="mailto:lyonel.bernard@gmail.com" class="text-blue-600 hover:underline">lyonel.bernard@gmail.com</a><br>
+              <strong>Permanent :</strong> Achetez une licence sur notre site (199€)
+            </p>
+          </div>
+
+          <button 
+            onclick="activateLicense()" 
+            class="rounded bg-blue-600 px-6 py-2.5 text-white font-medium hover:bg-blue-700 transition"
           >
             Activer la licence
           </button>
-        </form>
-      </div>
-
-      <!-- Comparaison des versions -->
-      <div class="rounded bg-white p-6 shadow">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Comparaison des versions</h3>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Version Lite -->
-          <div class="border border-gray-200 rounded-lg p-4">
-            <h4 class="text-lg font-semibold text-gray-900 mb-3">🆓 Version Lite</h4>
-            <ul class="space-y-2 text-sm">
-              <li class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Lecture audio en direct</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>VU-mètre en temps réel</span>
-              </li>
-              <li class="flex items-center gap-2 text-gray-400">
-                <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <span>Décodage RDS</span>
-              </li>
-              <li class="flex items-center gap-2 text-gray-400">
-                <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <span>Alertes email</span>
-              </li>
-              <li class="flex items-center gap-2 text-gray-400">
-                <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <span>Statistiques et historique</span>
-              </li>
-              <li class="flex items-center gap-2 text-gray-400">
-                <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <span>Configuration réseau</span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Version Full -->
-          <div class="border-2 border-blue-500 rounded-lg p-4 bg-blue-50">
-            <h4 class="text-lg font-semibold text-blue-900 mb-3">💎 Version Full</h4>
-            <ul class="space-y-2 text-sm">
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span><strong>Toutes les fonctionnalités</strong></span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Décodage RDS complet</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Alertes email automatiques</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Historique complet des alertes</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Statistiques avancées</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Configuration réseau (WiFi, IP fixe)</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Support par email</span>
-              </li>
-              <li class="flex items-center gap-2 text-blue-900">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <span>Mises à jour prioritaires</span>
-              </li>
-            </ul>
-
-            <div class="mt-4 pt-4 border-t border-blue-200">
-              <p class="text-sm text-blue-900">
-                <strong>Prix :</strong> À définir
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
     </main>
   </div>
 
-  <script>
-    // Fonction pour récupérer le token CSRF
-    function getCSRFToken() {
-      const meta = document.querySelector('meta[name="csrf-token"]');
-      return meta ? meta.content : '';
-    }
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    // Charger le statut au chargement
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLicenseStatus();
+      updateSidebarFrequency();
+    });
 
-    // Charger le statut de la licence
     async function loadLicenseStatus() {
       try {
         const response = await fetch('/api/license/status');
         const data = await response.json();
-
-        const statusBadge = document.getElementById('status-badge');
         
-        if (data.status === 'full') {
-          statusBadge.innerHTML = `
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-              <div class="flex items-center">
-                <svg class="h-6 w-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <div class="ml-3">
-                  <p class="text-sm font-medium text-blue-900">💎 Licence Full Active</p>
-                  <p class="text-xs text-blue-700 mt-1">Activée le: ${new Date(data.activated_at).toLocaleDateString('fr-FR')}</p>
-                  ${data.email ? `<p class="text-xs text-blue-700">Email: ${data.email}</p>` : ''}
-                </div>
-              </div>
-            </div>
-          `;
-        } else {
-          statusBadge.innerHTML = `
-            <div class="bg-gray-50 border-l-4 border-gray-400 p-4 rounded">
-              <div class="flex items-center">
-                <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-                <div class="ml-3">
-                  <p class="text-sm font-medium text-gray-900">🆓 Version Lite</p>
-                  <p class="text-xs text-gray-600 mt-1">Activez une licence Premium pour débloquer toutes les fonctionnalités</p>
-                </div>
-              </div>
-            </div>
-          `;
+        if (data.status === 'success') {
+          displayLicenseStatus(data.license);
         }
       } catch (error) {
-        console.error('Erreur chargement statut licence:', error);
+        console.error('Erreur chargement licence:', error);
       }
     }
 
-    // Gérer l'activation
-    document.getElementById('activation-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    function displayLicenseStatus(license) {
+      const container = document.getElementById('license-status');
+      
+      let html = '';
+      let badgeColor = '';
+      let badgeText = '';
+      
+      // Badge selon le type
+      if (license.type === 'lite') {
+        badgeColor = 'bg-gray-100 text-gray-800';
+        badgeText = 'Lite (Gratuit)';
+      } else if (license.type === 'full_trial') {
+        badgeColor = 'bg-blue-100 text-blue-800';
+        badgeText = 'Full Trial';
+      } else if (license.type === 'full_permanent') {
+        badgeColor = 'bg-purple-100 text-purple-800';
+        badgeText = 'Full Permanent';
+      }
+      
+      html += `<div class="flex items-center gap-3">
+        <span class="text-lg font-medium text-gray-900">Type de licence :</span>
+        <span class="px-3 py-1 rounded-full text-sm font-medium ${badgeColor}">${badgeText}</span>
+      </div>`;
+      
+      // Afficher l'email si licence activée
+      if (license.email && license.type !== 'lite') {
+        html += `
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-600">Email associé :</span>
+            <span class="text-sm font-medium text-gray-900">${license.email}</span>
+          </div>
+        `;
+      }
+      
+      // Informations spécifiques Trial
+      if (license.type === 'full_trial') {
+        const daysLeft = license.days_left;
+        const progressPercent = (daysLeft / 30) * 100;
+        
+        html += `
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Temps restant</span>
+              <span class="text-lg font-bold ${daysLeft < 7 ? 'text-red-600' : 'text-blue-600'}">${daysLeft} jours</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: ${progressPercent}%"></div>
+            </div>
+            <p class="text-xs text-gray-500">Expire le ${new Date(license.expires_at).toLocaleDateString('fr-FR')}</p>
+          </div>
+        `;
+        
+        if (daysLeft < 7) {
+          html += `
+            <div class="rounded bg-orange-50 border border-orange-200 p-4">
+              <p class="text-sm text-orange-800">
+                ⚠️ Votre licence Trial expire bientôt ! Passez à une licence Permanent pour continuer à profiter de toutes les fonctionnalités.
+              </p>
+              <a href="mailto:lyonel.bernard@gmail.com" class="mt-2 inline-block text-sm font-medium text-orange-800 hover:underline">
+                Acheter une licence Permanent →
+              </a>
+            </div>
+          `;
+        }
+      }
+      
+      // Informations Permanent
+      if (license.type === 'full_permanent') {
+        html += `
+          <div class="rounded bg-green-50 border border-green-200 p-4">
+            <p class="text-sm text-green-800">
+              ✅ Vous bénéficiez de toutes les fonctionnalités de FM Monitor de manière illimitée !
+            </p>
+          </div>
+        `;
+      }
+      
+      // Informations Lite
+      if (license.type === 'lite') {
+        html += `
+          <div class="rounded bg-blue-50 border border-blue-200 p-4">
+            <p class="text-sm text-blue-800 mb-2">
+              💡 Vous utilisez la version Lite gratuite. Débloquez toutes les fonctionnalités :
+            </p>
+            <ul class="text-sm text-blue-700 space-y-1 ml-4">
+              <li>• <strong>Trial gratuit :</strong> Demandez une clé Trial 30 jours</li>
+              <li>• <strong>Permanent :</strong> Achetez une licence définitive (199€)</li>
+            </ul>
+          </div>
+        `;
+      }
+      
+      container.innerHTML = html;
+    }
 
-      const licenseKey = document.getElementById('license_key').value.trim();
-      const email = document.getElementById('email').value.trim() || null;
-
-      const csrfToken = getCSRFToken();
-
+    async function activateLicense() {
+      const email = document.getElementById('license-email').value.trim();
+      const key = document.getElementById('license-key').value.trim();
+      const messageDiv = document.getElementById('activation-message');
+      
+      if (!email) {
+        showMessage('Veuillez entrer votre adresse email', 'error');
+        return;
+      }
+      
+      if (!key) {
+        showMessage('Veuillez entrer une clé de licence', 'error');
+        return;
+      }
+      
       try {
         const response = await fetch('/api/license/activate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify({ license_key: licenseKey, email })
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email: email, key: key })
         });
-
+        
         const data = await response.json();
-
-        if (data.status === 'success') {
-          document.getElementById('success-text').textContent = data.message;
-          document.getElementById('success-message').classList.remove('hidden');
-          document.getElementById('error-message').classList.add('hidden');
-          document.getElementById('activation-form').reset();
-          
-          // Recharger le statut
+        
+        if (data.status === 'success' || data.success) {
+          showMessage(data.message, 'success');
+          // Recharger le statut après 1 seconde
           setTimeout(() => {
             loadLicenseStatus();
+            document.getElementById('license-email').value = '';
+            document.getElementById('license-key').value = '';
           }, 1000);
         } else {
-          document.getElementById('error-text').textContent = data.message;
-          document.getElementById('error-message').classList.remove('hidden');
-          document.getElementById('success-message').classList.add('hidden');
+          showMessage(data.message, 'error');
         }
       } catch (error) {
-        console.error('Erreur activation:', error);
-        document.getElementById('error-text').textContent = 'Erreur de connexion au serveur';
-        document.getElementById('error-message').classList.remove('hidden');
-        document.getElementById('success-message').classList.add('hidden');
+        showMessage('Erreur lors de l\'activation', 'error');
       }
-    });
+    }
 
-    // Charger le statut au chargement de la page
-    loadLicenseStatus();
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('activation-message');
+      messageDiv.className = 'mb-4 rounded p-4 ';
+      
+      if (type === 'success') {
+        messageDiv.className += 'bg-green-50 border border-green-200 text-green-800';
+      } else {
+        messageDiv.className += 'bg-red-50 border border-red-200 text-red-800';
+      }
+      
+      messageDiv.textContent = text;
+      messageDiv.classList.remove('hidden');
+      
+      setTimeout(() => {
+        messageDiv.classList.add('hidden');
+      }, 5000);
+    }
+
+    async function updateSidebarFrequency() {
+      try {
+        const response = await fetch('/api/config/full');
+        const config = await response.json();
+        const freq = config.rtl_sdr?.frequency || '88.6M';
+        const freqMhz = freq.replace('M', ' MHz');
+        document.getElementById('sidebar-frequency').textContent = freqMhz;
+      } catch (error) {
+        console.error('Erreur config sidebar:', error);
+      }
+    }
   </script>
+
 </body>
 </html>

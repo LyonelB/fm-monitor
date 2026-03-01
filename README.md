@@ -1,278 +1,385 @@
-# 📻 FM Monitor
+# 🎙️ FM Monitor
 
-**Système de surveillance radio FM en temps réel pour Raspberry Pi**
+![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
+![Python](https://img.shields.io/badge/python-3.13-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-Surveillez votre émetteur FM 24/7 avec alertes automatiques en cas de perte de signal, interface web moderne et sécurisée.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-3%2F4%2F5-red.svg)](https://www.raspberrypi.org/)
+**Système professionnel de monitoring de stations de radio FM** basé sur Raspberry Pi et RTL-SDR avec streaming Icecast2, décodage RDS temps réel, et interface web moderne.
 
 ---
 
-## ✨ Fonctionnalités
+## ✨ Fonctionnalités principales
 
-### 🎯 Monitoring en temps réel
-- **Surveillance continue** du signal FM (24/7)
-- **Détection automatique** des pertes de signal
-- **VU-mètre** en direct (-60 dB à 0 dB)
-- **Historique** des événements
+### 🎵 Streaming Audio Professionnel (v0.3.1)
+- **Serveur Icecast2 HTTPS** : Streaming stable 24/7 sans corruption
+- **Multi-auditeurs** : Jusqu'à 100 auditeurs simultanés
+- **Qualité broadcast** : MP3 128 kbps stéréo
+- **Reconnexion automatique** : Gestion intelligente des déconnexions
 
-### 📡 Décodage RDS
-- **PS** (Programme Service) - Nom de la station
-- **RT** (RadioText) - Texte défilant
-- **PI** (Programme Identification)
-- Décodage en temps réel avec `redsea`
+### 📻 Monitoring Radio
+- **Décodage RDS en temps réel** : Titre, artiste, station (PI, PS, RT)
+- **VU-mètre temps réel** : Visualisation du niveau audio
+- **Détection de silence** : Alertes automatiques
+- **Historique audio** : Graphiques des 60 dernières minutes
 
-### 📧 Alertes email
-- **Email automatique** lors de perte de signal (>15s)
-- **Email de rétablissement** quand le signal revient
-- Support **Gmail** et autres SMTP
-- Multiples destinataires
+### 🔔 Surveillance et Alertes
+- **Watchdog intelligent** : Surveillance continue du signal
+- **Alertes email** : Notifications en cas de problème
+- **Dashboard temps réel** : Interface web responsive
+- **Statistiques détaillées** : Temps d'écoute, coupures, qualité signal
 
-### 🎵 Streaming audio
-- **Stream MP3** 128 kbps en direct
-- **Player intégré** dans l'interface
-- Latence minimale (~2 secondes)
-
-### 📊 Statistiques
-- **Historique** complet des alertes
-- **Graphiques** de niveau audio
-- **Logs système** en temps réel
-- **Uptime** et métriques
-
-### 🔒 Sécurité
-- **HTTPS/TLS** (certificat SSL)
-- **Authentification** Bcrypt
-- **Rate limiting** (anti force-brute)
-- **CSRF Protection**
-- **Score sécurité : 9/10**
-
-### 🌐 Interface moderne
-- **Dashboard** responsive (Tailwind CSS)
-- Compatible **mobile/tablette/desktop**
-- **Thème sombre** pour la sidebar
-- **Temps réel** (Server-Sent Events)
+### 🔐 Système de Licences (v0.3.1)
+- **Lite (gratuit)** : Streaming + VU-mètre
+- **Full Trial (30 jours)** : Toutes fonctionnalités
+- **Full Permanent** : Licence à vie avec RDS, Watchdog, Alertes
 
 ---
 
 ## 🚀 Installation rapide
 
-### Une seule commande !
-
-```bash
-curl -sSL https://raw.githubusercontent.com/LyonelB/fm-monitor/main/install.sh | bash
-```
-
-**C'est tout !** ⏱️ Durée : 5-10 minutes
-
 ### Prérequis
-- Raspberry Pi 3, 4 ou 5
-- Raspberry Pi OS (Debian/Ubuntu)
-- Dongle RTL-SDR (RTL2832U)
-- Connexion Internet
 
----
+**Hardware**
+- Raspberry Pi 3/4/5 (4GB RAM recommandé)
+- RTL-SDR USB (RTL-SDR Blog V3/V4 recommandé)
+- Antenne FM (dipôle ou télescopique)
+- Carte microSD 32GB minimum
+- Alimentation stable 5V/3A
 
-## 📖 Documentation
+**Système**
+- Raspberry Pi OS (Debian Bookworm/Trixie)
+- Python 3.13+
+- 2GB espace disque libre
 
-### Guides d'installation
-- [Installation simple](docs/INSTALLATION_SIMPLE.md) - Guide pas à pas
-- [Installation manuelle](docs/INSTALLATION_MANUELLE.md) - Configuration avancée
-- [Configuration RTL-SDR](docs/RTL-SDR.md) - Paramétrage du dongle
-
-### Configuration
-- [Configuration réseau](docs/NETWORK.md) - WiFi, IP fixe
-- [Alertes email](docs/EMAIL.md) - Configuration Gmail/SMTP
-- [Certificat SSL](docs/SSL.md) - HTTPS personnalisé
-
-### Administration
-- [Service systemd](docs/SYSTEMD.md) - Gestion du service
-- [Mise à jour](docs/UPDATE.md) - Procédure de mise à jour
-- [Sauvegardes](docs/BACKUP.md) - Stratégie de backup
-
-### Développement
-- [Architecture](docs/ARCHITECTURE.md) - Structure du code
-- [API](docs/API.md) - Documentation API REST
-- [Contribuer](CONTRIBUTING.md) - Guide de contribution
-
----
-
-## 🛠️ Configuration rapide
-
-### 1. Accéder à l'interface
-
-```
-https://IP_DU_RASPBERRY:5000
-```
-
-**Identifiants par défaut** :
-- Username: `admin`
-- Password: `password`
-
-⚠️ **Changez le mot de passe immédiatement !**
-
-### 2. Configurer la fréquence
-
-**Configuration** → **Fréquence de monitoring** → Exemple : `88.6M`
-
-### 3. Configurer les alertes email
-
-**Configuration** → **Alertes email** :
-- Email expéditeur : `votre.email@gmail.com`
-- Mot de passe : [Mot de passe d'application Gmail](https://support.google.com/accounts/answer/185833)
-- Destinataires : `alerte1@email.com, alerte2@email.com`
-
-Cliquez sur **Tester** puis **Enregistrer**
-
----
-
-## 🔧 Commandes utiles
+### Installation automatique
 
 ```bash
-# Gérer le service
-sudo systemctl start fm-monitor      # Démarrer
-sudo systemctl stop fm-monitor       # Arrêter
-sudo systemctl restart fm-monitor    # Redémarrer
-sudo systemctl status fm-monitor     # Statut
-
-# Logs
-sudo journalctl -u fm-monitor -f     # Logs en temps réel
-sudo journalctl -u fm-monitor -n 100 # 100 dernières lignes
-
-# Mise à jour
-cd ~/fm-monitor
-./update.sh                          # Script automatique
-```
-
----
-
-## 📸 Captures d'écran
-
-### Dashboard
-![Dashboard](docs/screenshots/dashboard.png)
-
-### Configuration
-![Configuration](docs/screenshots/configuration.png)
-
-### Statistiques
-![Statistiques](docs/screenshots/statistiques.png)
-
----
-
-## 🏗️ Architecture technique
-
-### Backend
-- **Python 3.9+** - Langage principal
-- **Flask 3.0** - Framework web
-- **RTL-SDR** - Réception radio
-- **Sox/Lame** - Traitement audio
-- **Redsea** - Décodage RDS
-
-### Frontend
-- **Tailwind CSS** - Framework CSS
-- **Vanilla JavaScript** - Pas de framework lourd
-- **Server-Sent Events** - Mise à jour temps réel
-- **Fetch API** - Communication AJAX
-
-### Sécurité
-- **Bcrypt** - Hashage mots de passe
-- **Flask-Limiter** - Rate limiting
-- **Flask-WTF** - Protection CSRF
-- **OpenSSL** - Certificats SSL
-
----
-
-## 📊 Spécifications techniques
-
-| Composant | Valeur |
-|-----------|--------|
-| **Fréquence** | 87.5 - 108.0 MHz |
-| **Sample rate** | 1.14 MHz |
-| **Audio bitrate** | 128 kbps MP3 |
-| **Seuil silence** | -40 dBFS (configurable) |
-| **Durée alerte** | 15 secondes (configurable) |
-| **Latence audio** | ~2 secondes |
-| **CPU usage** | 2-4% (Raspberry Pi 4) |
-| **RAM usage** | ~150 MB |
-
----
-
-## 🤝 Contribuer
-
-Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md)
-
-### Développement local
-
-```bash
-# Cloner le repo
+# 1. Cloner le dépôt
 git clone https://github.com/LyonelB/fm-monitor.git
 cd fm-monitor
 
-# Environnement virtuel
-python3 -m venv venv
-source venv/bin/activate
+# 2. Lancer l'installation
+chmod +x install.sh
+sudo ./install.sh
 
-# Dépendances
-pip install -r requirements.txt
+# 3. Configurer
+cp config.json.example config.json
+nano config.json  # Éditer la fréquence, gain, etc.
 
-# Lancer en mode dev
-python3 app.py
+# 4. Démarrer
+sudo systemctl start fm-monitor
+sudo systemctl enable fm-monitor
 ```
+
+### Accès à l'interface
+
+**Dashboard** : `https://[IP-RASPBERRY]:5000`
+
+**Login par défaut** :
+- Username: `admin`
+- Password: `admin` (⚠️ À changer immédiatement)
 
 ---
 
-## 📝 Changelog
+## 📖 Installation Icecast2 (v0.3.1)
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
+Le streaming professionnel nécessite Icecast2 :
 
-### Version actuelle : 2.0.0
+```bash
+# 1. Installer Icecast2 et ffmpeg
+sudo apt update
+sudo apt install -y icecast2 ffmpeg
 
-**Nouvelles fonctionnalités** :
-- ✅ Interface Tailwind CSS moderne
-- ✅ Sécurité renforcée (Bcrypt, HTTPS, CSRF)
-- ✅ Configuration réseau (WiFi, IP fixe)
-- ✅ Optimisations performances (-50% CPU)
+# 2. Configurer Icecast (voir docs/)
+sudo systemctl enable icecast2
+sudo systemctl start icecast2
+
+# 3. Le stream sera disponible sur :
+# HTTP:  http://[IP]:8000/fmmonitor
+# HTTPS: https://[IP]:8443/fmmonitor
+```
+
+**Documentation complète** : Voir `docs/INSTALLATION_ICECAST2.md`
+
+---
+
+## 🎛️ Configuration
+
+### Fichier `config.json`
+
+```json
+{
+  "frequency": "88.6",
+  "gain": "40",
+  "ppm_error": "0",
+  "output_rate": "44100",
+  "silence_threshold": "-40",
+  "silence_duration": "30",
+  "watchdog_enabled": true,
+  "email_alerts": {
+    "enabled": false,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "from_email": "votre@email.com",
+    "to_email": "destination@email.com",
+    "password": "votre_mot_de_passe"
+  }
+}
+```
+
+### Paramètres principaux
+
+| Paramètre | Description | Valeur par défaut |
+|---|---|---|
+| `frequency` | Fréquence FM en MHz | `88.6` |
+| `gain` | Gain RTL-SDR (0-50) | `40` |
+| `ppm_error` | Correction PPM | `0` |
+| `silence_threshold` | Seuil silence en dB | `-40` |
+| `watchdog_enabled` | Surveillance active | `true` |
+
+---
+
+## 🎨 Interface Web
+
+### Dashboard Principal
+- 📊 **Stats temps réel** : Signal, RDS, uptime
+- 🎵 **Player intégré** : Écoute directe du stream
+- 📈 **Graphiques** : Historique niveau audio
+- 🟢 **Status services** : RDS, Watchdog, Alertes
+
+### Pages disponibles
+- `/` - Dashboard principal
+- `/config` - Configuration système
+- `/stats` - Statistiques détaillées
+- `/license` - Gestion licences
+
+---
+
+## 🔧 Architecture Technique
+
+### Pipeline Audio (v0.3.1)
+
+```
+Antenne FM → RTL-SDR USB
+              ↓
+          rtl_fm (démodulation FM)
+              ↓
+          ┌───┴───┐
+          ↓       ↓
+       redsea   ffmpeg (encodage MP3)
+      (RDS)         ↓
+                Icecast2 HTTPS
+                    ↓
+              Flask Proxy (/stream.mp3)
+                    ↓
+              Player Web (Dashboard)
+```
+
+### Stack Technique
+
+**Backend**
+- Python 3.13
+- Flask 3.1.0
+- SQLite (base de données)
+- Icecast2 (streaming server)
+
+**Frontend**
+- HTML5 + JavaScript vanilla
+- Tailwind CSS
+- Chart.js (graphiques)
+- SSE (Server-Sent Events)
+
+**Audio**
+- rtl_fm (démodulation)
+- ffmpeg (encodage)
+- redsea (décodage RDS)
+- Icecast2 (diffusion)
+
+---
+
+## 📦 Dépendances
+
+### Paquets système
+
+```bash
+sudo apt install -y \
+  rtl-sdr \
+  sox \
+  ffmpeg \
+  icecast2 \
+  redsea \
+  python3-pip \
+  python3-venv
+```
+
+### Modules Python
+
+Voir `requirements.txt` :
+- Flask (serveur web)
+- Flask-HTTPAuth (authentification)
+- Flask-Limiter (rate limiting)
+- bcrypt (hashage mots de passe)
+- requests (proxy HTTP)
+
+---
+
+## 🔐 Sécurité
+
+### HTTPS Obligatoire
+
+FM Monitor utilise HTTPS par défaut avec des certificats auto-signés. Pour un certificat valide :
+
+```bash
+# Let's Encrypt (si domaine public)
+sudo certbot certonly --standalone -d votre-domaine.com
+
+# Copier les certificats
+sudo cp /etc/letsencrypt/live/votre-domaine.com/fullchain.pem cert.pem
+sudo cp /etc/letsencrypt/live/votre-domaine.com/privkey.pem key.pem
+```
+
+### Authentification
+
+- **HTTP Basic Auth** : Login/password sur toutes les pages
+- **CSRF Protection** : Tokens CSRF sur formulaires
+- **Rate Limiting** : 50 requêtes/heure (routes sensibles)
+
+### Système de Licences
+
+- Clés cryptographiques HMAC SHA-256
+- Une clé = un email unique
+- Anti-partage (activation unique)
+- Traçabilité complète
+
+---
+
+## 🐛 Dépannage
+
+### Le stream ne fonctionne pas
+
+```bash
+# Vérifier Icecast
+sudo systemctl status icecast2
+
+# Vérifier le mountpoint
+curl -I http://localhost:8000/fmmonitor
+
+# Voir les logs
+sudo journalctl -u fm-monitor -f
+```
+
+### Pas de son / Son métallique
+
+```bash
+# Vérifier le gain RTL-SDR
+rtl_test -t
+
+# Tester la fréquence
+rtl_fm -f 88.6M -M wbfm -s 171k - | play -r 171k -t raw -e s -b 16 -c 1 -V1 -
+```
+
+### RDS ne décode pas
+
+```bash
+# Vérifier redsea
+echo "" | redsea -p
+
+# Voir les logs RDS
+cat /tmp/rds_output.json
+```
+
+### Erreurs 429 (Too Many Requests)
+
+Routes fréquentes déjà exemptées du rate limiting. Si problème persiste, vérifier `app.py` ligne 190+.
+
+---
+
+## 📊 Performances
+
+### Raspberry Pi 3
+- CPU : ~15-25%
+- RAM : ~200-300 MB
+- Bande passante : ~0.5 Mbps (par auditeur)
+
+### Raspberry Pi 4/5
+- CPU : ~8-15%
+- RAM : ~200-300 MB
+- Multi-streaming possible (plusieurs fréquences)
+
+---
+
+## 🗺️ Roadmap
+
+### v0.4.0 (Q2 2026)
+- [ ] Filtres audio ffmpeg (compresseur, égaliseur)
+- [ ] Support DAB+ (via rtl_tcp)
+- [ ] Dashboard multi-stations
+- [ ] Export données CSV/JSON
+- [ ] API REST publique
+
+### v0.5.0 (Q3 2026)
+- [ ] Mobile app (iOS/Android)
+- [ ] Reconnaissance musicale (Shazam-like)
+- [ ] Détection publicités
+- [ ] Enregistrement programmé
+
+### Idées futures
+- [ ] Support SDRplay, HackRF
+- [ ] Machine Learning (détection genres)
+- [ ] Cloud streaming (AWS/Azure)
+
+---
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues !
+
+1. Fork le projet
+2. Créer une branche (`git checkout -b feature/AmazingFeature`)
+3. Commit (`git commit -m 'Add AmazingFeature'`)
+4. Push (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+**Guidelines** :
+- Code Python PEP 8
+- Tests unitaires si possible
+- Documentation claire
+- Pas de fichiers sensibles (licences, certificats)
 
 ---
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence MIT - voir `LICENSE` pour détails.
 
----
-
-## 👨‍💻 Auteur
-
-**Lyonel B.**
-- GitHub: [@LyonelB](https://github.com/LyonelB)
-- Email: lyonel@fm-monitor.com
+**IMPORTANT** : Le système de génération de licences (`generate_license.py`, `license_manager.py`) n'est **pas** inclus dans ce dépôt pour des raisons de sécurité commerciale.
 
 ---
 
 ## 🙏 Remerciements
 
-- [RTL-SDR](https://www.rtl-sdr.com/) - Logiciel SDR
-- [Redsea](https://github.com/windytan/redsea) - Décodeur RDS
-- [Flask](https://flask.palletsprojects.com/) - Framework web
-- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
+- **rtl-sdr** : https://osmocom.org/projects/rtl-sdr
+- **redsea** : https://github.com/windytan/redsea
+- **Icecast** : https://icecast.org/
+- **Flask** : https://flask.palletsprojects.com/
+- **Tailwind CSS** : https://tailwindcss.com/
 
 ---
 
 ## 📞 Support
 
-- **Documentation** : [Wiki](https://github.com/LyonelB/fm-monitor/wiki)
 - **Issues** : [GitHub Issues](https://github.com/LyonelB/fm-monitor/issues)
 - **Discussions** : [GitHub Discussions](https://github.com/LyonelB/fm-monitor/discussions)
+- **Email** : support@fm-monitor.com
 
 ---
 
-## ⭐ Star History
+## 🌟 Star History
 
-Si vous aimez ce projet, n'hésitez pas à lui donner une étoile ! ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=LyonelB/fm-monitor&type=Date)](https://star-history.com/#LyonelB/fm-monitor&Date)
+Si ce projet vous est utile, n'hésitez pas à lui donner une ⭐ !
 
 ---
 
-**FM Monitor** - Surveillance radio FM professionnelle pour Raspberry Pi 📻
+**Développé avec ❤️ par la communauté radio**
+
+Dernière mise à jour : 1er mars 2026

@@ -148,46 +148,15 @@ def config():
 
 @app.route('/stats')
 @auth.login_required
+@license_required('stats')
 def stats():
     """Page des statistiques"""
     return render_template('stats.html')
 
-@app.route('/stream.mp3')
-@auth.login_required
-@csrf.exempt  # Exemption CSRF pour streaming continu
-def stream():
-    """Stream audio en direct"""
-    def generate():
-        logger.info("Client connecté au stream audio")
-        try:
-            while True:
-                if monitor and monitor.running:
-                    chunk = monitor.get_audio_chunk()
-                    if chunk:
-                        yield chunk
-                    else:
-                        time.sleep(0.05)
-                else:
-                    break
-        except GeneratorExit:
-            logger.info("Client déconnecté du stream audio")
-        except Exception as e:
-            logger.error(f"Erreur de streaming: {e}")
-
-    response = Response(
-        generate(),
-        mimetype='audio/mpeg',
-        headers={
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'X-Content-Type-Options': 'nosniff'
-        }
-    )
-    return response
-
 @app.route('/api/stats')
 @auth.login_required
+@limiter.exempt
+@license_required('stats')
 def get_stats():
     """Récupère les statistiques avec cache 100ms"""
     now = time.time()
@@ -204,6 +173,7 @@ def get_stats():
 
 @app.route('/api/stream/stats')
 @auth.login_required
+@limiter.exempt  # Exemption rate limiting pour SSE continu
 @csrf.exempt  # Exemption CSRF pour SSE (Server-Sent Events)
 def stream_stats():
     """SSE : pousse les stats en continu vers le navigateur"""
@@ -219,6 +189,7 @@ def stream_stats():
 
 @app.route('/api/services/status')
 @auth.login_required
+@limiter.exempt
 def get_services_status():
     """Retourne l'état de tous les services"""
     if monitor:
@@ -289,7 +260,7 @@ def save_config():
         if 'rtl_sdr' in data:
             if 'frequency' in data['rtl_sdr']:
                 config['rtl_sdr']['frequency'] = data['rtl_sdr']['frequency']
-            
+
             if 'gain' in data['rtl_sdr']:
                 gain = str(data['rtl_sdr']['gain']).strip()
                 if gain == '0':
@@ -352,7 +323,7 @@ def save_config():
             config['network']['gateway'] = network_data.get('gateway', '')
             config['network']['dns'] = network_data.get('dns', '')
             config['network']['wifi_ssid'] = network_data.get('wifi_ssid', '')
-            
+
             # Ne pas écraser le mot de passe WiFi s'il est vide (sécurité)
             wifi_password = network_data.get('wifi_password', '')
             if wifi_password and wifi_password.strip():
@@ -444,6 +415,7 @@ def test_email():
 
 @app.route('/api/audio/history')
 @auth.login_required
+@limiter.exempt  # Exemption rate limiting pour historique appelé fréquemment
 def get_audio_history():
     """Récupère l'historique des niveaux audio (24h)"""
     try:
@@ -456,6 +428,7 @@ def get_audio_history():
 
 @app.route('/api/alerts/history')
 @auth.login_required
+@license_required('alerts')
 def get_alerts_history():
     """Récupère l'historique des alertes"""
     try:
@@ -496,6 +469,7 @@ def restart_monitoring():
 
 @app.route('/api/rds/read_ps', methods=['POST'])
 @auth.login_required
+@license_required('rds')
 def read_rds_ps():
     """Lecture ponctuelle PS et RT"""
     try:
@@ -510,6 +484,7 @@ def read_rds_ps():
 
 @app.route('/api/rds/read_rt', methods=['POST'])
 @auth.login_required
+@license_required('rds')
 def read_rds_rt():
     """Lecture ponctuelle du RadioText"""
     try:
@@ -532,36 +507,71 @@ def license_page():
 @auth.login_required
 def get_license_status():
     """Retourne le statut de la licence"""
-    return jsonify(license_manager.get_license_status())
+    license_info = license_manager.get_license_info()
+    return jsonify({
+        'status': 'success',
+        'license': license_info
+    })
 
 @app.route('/api/license/activate', methods=['POST'])
 @auth.login_required
+@csrf.exempt
 def activate_license():
-    """Active une licence"""
+    """Active une licence avec vérification email"""
     data = request.json
-    license_key = data.get('license_key')
     email = data.get('email')
+    license_key = data.get('key') or data.get('license_key')
+
+    if not email:
+        return jsonify({'status': 'error', 'message': 'Email manquant'}), 400
 
     if not license_key:
         return jsonify({'status': 'error', 'message': 'Clé manquante'}), 400
 
-    success, message = license_manager.activate_license(license_key, email)
+    result = license_manager.activate_license(license_key, email)
 
-    if success:
-        return jsonify({'status': 'success', 'message': message})
+    if result.get('success') or result.get('status') == 'success':
+        return jsonify(result)
     else:
-        return jsonify({'status': 'error', 'message': message}), 400
+        return jsonify(result), 400
 
 @app.route('/api/license/features')
 @auth.login_required
 def get_features():
     """Retourne les fonctionnalités disponibles"""
-    features = license_manager.get_available_features()
+    license_type = license_manager.get_license_type()
     return jsonify({
         'status': 'success',
-        'features': features,
-        'is_full': license_manager.is_full()
+        'license_type': license_type,
+        'is_full': license_type in ['full_trial', 'full_permanent']
     })
+
+@app.route('/stream.mp3')
+@limiter.exempt  # Exemption rate limiting pour le stream audio
+def proxy_stream():
+    """Proxifie le stream Icecast HTTPS via Flask"""
+    import requests
+
+    def generate():
+        try:
+            # Connexion au stream Icecast en HTTPS (verify=False car certificat auto-signé)
+            with requests.get('https://localhost:8443/fmmonitor', stream=True, verify=False, timeout=5) as r:
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+        except Exception as e:
+            logger.error(f"Erreur proxy stream: {e}")
+
+    return app.response_class(
+        generate(),
+        mimetype='audio/mpeg',
+        headers={
+            'Cache-Control': 'no-cache, no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'Access-Control-Allow-Origin': '*'
+        }
+    )
 
 if __name__ == '__main__':
     try:
