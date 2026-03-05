@@ -15,7 +15,6 @@ import os
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
-from license_manager import license_manager, license_required
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -148,15 +147,12 @@ def config():
 
 @app.route('/stats')
 @auth.login_required
-@license_required('stats')
 def stats():
     """Page des statistiques"""
     return render_template('stats.html')
 
 @app.route('/api/stats')
-@auth.login_required
 @limiter.exempt
-@license_required('stats')
 def get_stats():
     """Récupère les statistiques avec cache 100ms"""
     now = time.time()
@@ -172,7 +168,6 @@ def get_stats():
     return jsonify({'error': 'Monitor not initialized'}), 503
 
 @app.route('/api/stream/stats')
-@auth.login_required
 @limiter.exempt  # Exemption rate limiting pour SSE continu
 @csrf.exempt  # Exemption CSRF pour SSE (Server-Sent Events)
 def stream_stats():
@@ -188,7 +183,6 @@ def stream_stats():
     )
 
 @app.route('/api/services/status')
-@auth.login_required
 @limiter.exempt
 def get_services_status():
     """Retourne l'état de tous les services"""
@@ -197,7 +191,6 @@ def get_services_status():
     return jsonify({'status': 'error', 'message': 'Monitor not initialized'}), 503
 
 @app.route('/api/services/toggle', methods=['POST'])
-@auth.login_required
 def toggle_service():
     """Active ou désactive un service"""
     try:
@@ -227,12 +220,14 @@ def toggle_service():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/config/full')
-@auth.login_required
 def get_config_full():
-    """Retourne la configuration complète"""
+    """Retourne la configuration complète (mot de passe masqué)"""
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
+        # Masquer le mot de passe email
+        if 'email' in config and 'sender_password' in config['email']:
+            config['email']['sender_password'] = '********'
         return jsonify(config)
     except Exception as e:
         logger.error(f"Erreur lors de la lecture de la config: {e}")
@@ -336,6 +331,18 @@ def save_config():
 
         logger.info("Configuration sauvegardée avec succès")
 
+        # Redémarrer le monitoring si la fréquence ou le gain a changé
+        needs_restart = ('rtl_sdr' in data and
+                        ('frequency' in data['rtl_sdr'] or 'gain' in data['rtl_sdr']))
+        if needs_restart and monitor:
+            logger.info("Fréquence/gain modifié - redémarrage du monitoring")
+            monitor.stop()
+            time.sleep(2)
+            monitor.config = config
+            monitor.rtl_config = config['rtl_sdr']
+            monitor.audio_config = config['audio']
+            monitor.start()
+
         # Appliquer la configuration réseau si elle a été modifiée
         if 'network' in data:
             try:
@@ -428,7 +435,6 @@ def get_audio_history():
 
 @app.route('/api/alerts/history')
 @auth.login_required
-@license_required('alerts')
 def get_alerts_history():
     """Récupère l'historique des alertes"""
     try:
@@ -469,7 +475,6 @@ def restart_monitoring():
 
 @app.route('/api/rds/read_ps', methods=['POST'])
 @auth.login_required
-@license_required('rds')
 def read_rds_ps():
     """Lecture ponctuelle PS et RT"""
     try:
@@ -484,7 +489,6 @@ def read_rds_ps():
 
 @app.route('/api/rds/read_rt', methods=['POST'])
 @auth.login_required
-@license_required('rds')
 def read_rds_rt():
     """Lecture ponctuelle du RadioText"""
     try:
@@ -494,57 +498,14 @@ def read_rds_rt():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # =============================================
-# ROUTES DE LICENCE (Lite/Full)
+# PAGE À PROPOS
 # =============================================
 
-@app.route('/license')
+@app.route('/about')
 @auth.login_required
-def license_page():
-    """Page de gestion de la licence"""
-    return render_template('license.html')
-
-@app.route('/api/license/status')
-@auth.login_required
-def get_license_status():
-    """Retourne le statut de la licence"""
-    license_info = license_manager.get_license_info()
-    return jsonify({
-        'status': 'success',
-        'license': license_info
-    })
-
-@app.route('/api/license/activate', methods=['POST'])
-@auth.login_required
-@csrf.exempt
-def activate_license():
-    """Active une licence avec vérification email"""
-    data = request.json
-    email = data.get('email')
-    license_key = data.get('key') or data.get('license_key')
-
-    if not email:
-        return jsonify({'status': 'error', 'message': 'Email manquant'}), 400
-
-    if not license_key:
-        return jsonify({'status': 'error', 'message': 'Clé manquante'}), 400
-
-    result = license_manager.activate_license(license_key, email)
-
-    if result.get('success') or result.get('status') == 'success':
-        return jsonify(result)
-    else:
-        return jsonify(result), 400
-
-@app.route('/api/license/features')
-@auth.login_required
-def get_features():
-    """Retourne les fonctionnalités disponibles"""
-    license_type = license_manager.get_license_type()
-    return jsonify({
-        'status': 'success',
-        'license_type': license_type,
-        'is_full': license_type in ['full_trial', 'full_permanent']
-    })
+def about_page():
+    """Page de documentation"""
+    return render_template('about.html')
 
 @app.route('/stream.mp3')
 @limiter.exempt  # Exemption rate limiting pour le stream audio

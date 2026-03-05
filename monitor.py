@@ -11,6 +11,7 @@ import logging
 import time
 import os
 import numpy as np
+import requests
 from datetime import datetime
 from email_alert import EmailAlert
 from database import FMDatabase
@@ -49,14 +50,22 @@ class FMMonitor:
             'alerts_sent': 0,
             'last_alert': None,
             'current_level': -100.0,
+            'modulation_active': False,
             'ps': '-',
             'rt': '-',
+            'pi': '-',
+            'station_logo': None,
             'status': 'Arrêté'
         }
 
         # Buffer pour accumuler le RadioText
         self.rt_buffer = ''
         self.rt_ab_flag = None
+        self._rt_stable_count = 0
+        self._rt_last_candidate = ''
+        self._logo_searched = False
+        self._logo_last_attempt = 0
+        self._logo_fail_count = 0
 
         # Lock pour thread-safety
         self.stats_lock = threading.Lock()
@@ -70,9 +79,9 @@ class FMMonitor:
         # =============================================
         self.vu_meter_enabled = True      # Calcul RMS et affichage VU-mètre
         self.audio_enabled = True          # Streaming audio (player)
-        self.watchdog_enabled = True       # Watchdog auto-relance rtl_fm
-        self.rds_enabled = False           # Lecteur RDS automatique (désactivé par défaut)
-        self.history_enabled = True        # Enregistrement historique audio 24h
+        self.watchdog_enabled = False       # Watchdog auto-relance rtl_fm
+        self.rds_enabled = True           # Lecteur RDS automatique (désactivé par défaut)
+        self.history_enabled = False        # Enregistrement historique audio 24h
 
         # Queue pour sauvegarde BDD non-bloquante
         self.db_queue = queue.Queue(maxsize=100)
@@ -292,8 +301,10 @@ class FMMonitor:
                     else:
                         db = -100.0
 
+                    modulation_active = bool(db > -60.0)
                     with self.stats_lock:
                         self.stats['current_level'] = float(db)
+                        self.stats['modulation_active'] = modulation_active
 
                     # Envoyer en BDD via queue non-bloquante toutes les 5 secondes
                     if self.history_enabled and time.time() - self.last_db_save >= 5:
@@ -366,21 +377,38 @@ class FMMonitor:
 
                     with self.stats_lock:
                         if 'ps' in data:
-                            self.stats['ps'] = data['ps']
+                            self.stats['ps'] = data['ps'].strip()
+                            if not self._logo_searched:
+                                import threading as _t
+                                _t.Thread(target=self._fetch_station_logo, daemon=True).start()
 
-                        if 'partial_radiotext' in data:
+                        if 'pi' in data:
+                            self.stats['pi'] = data['pi']
+
+                        if 'radiotext' in data:
+                            rt_full = data['radiotext'].strip()
+                            if rt_full:
+                                self.stats['rt'] = rt_full
+                                self.rt_buffer = rt_full
+                        elif 'partial_radiotext' in data:
                             rt_segment = data['partial_radiotext'].strip()
                             rt_ab = data.get('rt_ab', 'A')
-
                             if self.rt_ab_flag is not None and self.rt_ab_flag != rt_ab:
-                                self.stats['rt'] = self.rt_buffer.strip()
                                 self.rt_buffer = ''
-
+                                self._rt_stable_count = 0
+                                self._rt_last_candidate = ''
                             self.rt_ab_flag = rt_ab
-
                             if rt_segment and len(rt_segment) > len(self.rt_buffer):
                                 self.rt_buffer = rt_segment
-                                self.stats['rt'] = rt_segment
+                            # Stabilisation : même texte 3 fois de suite → RT validé
+                            if self.rt_buffer and self.rt_buffer == self._rt_last_candidate:
+                                self._rt_stable_count += 1
+                                if self._rt_stable_count >= 3:
+                                    self.stats['rt'] = self.rt_buffer
+                                    self._rt_stable_count = 0
+                            else:
+                                self._rt_last_candidate = self.rt_buffer
+                                self._rt_stable_count = 1
 
                 except json.JSONDecodeError:
                     continue
@@ -427,11 +455,8 @@ class FMMonitor:
                                 logger.info(f"PS trouvé: {self.stats['ps']}")
 
                             if 'partial_radiotext' in data:
-                                rt_segment = data['partial_radiotext'].strip()
-                                if rt_segment and len(rt_segment) > len(self.stats.get('rt', '')):
-                                    self.stats['rt'] = rt_segment
-                                    rt_found = True
-                                    logger.info(f"RT trouvé: {rt_segment}")
+                                # Ignoré : on n'affiche que le RT complet
+                                pass
 
                             if ps_found and rt_found:
                                 logger.info("PS et RT trouvés, arrêt anticipé")
@@ -496,6 +521,15 @@ class FMMonitor:
                 else:
                     if not self.signal_ok:
                         logger.info(f"Signal rétabli: {current_level:.2f} dB")
+                        if self.alert_sent:
+                            self.email_alert.send_recovery_alert()
+                            self.db.save_alert(
+                                alert_type='signal_restored',
+                                level_db=current_level,
+                                duration_seconds=int(time.time() - self.silence_start_time),
+                                message=f"Signal rétabli - {current_level:.2f} dB",
+                                email_sent=True
+                            )
 
                     self.signal_ok = True
                     self.silence_start_time = None
@@ -513,6 +547,58 @@ class FMMonitor:
                 logger.error(f"Erreur surveillance: {e}")
                 time.sleep(1)
 
+    def _fetch_station_logo(self):
+        import time as _time
+        if _time.time() - self._logo_last_attempt < 60:
+            return
+        self._logo_last_attempt = _time.time()
+        try:
+            ps = self.stats.get('ps', '').strip()
+            freq_raw = self.rtl_config.get('frequency', '')
+            freq_mhz = freq_raw.replace('M', '').replace('m', '')
+            station_name = self.config.get('station', {}).get('name', ps)
+            if not station_name or station_name == '-':
+                station_name = ps
+            if not station_name or station_name == '-':
+                return
+            logger.info(f"Recherche logo: {station_name} @ {freq_mhz} MHz")
+            valid_ext = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')
+            def is_valid(url):
+                return bool(url) and any(url.lower().split('?')[0].endswith(e) for e in valid_ext)
+            logo_url = None
+            for search_name in [station_name, ps]:
+                if logo_url:
+                    break
+                try:
+                    resp = requests.get(
+                        "https://de1.api.radio-browser.info/json/stations/search",
+                        params={'name': search_name, 'limit': 10, 'hidebroken': 'true'},
+                        timeout=5
+                    )
+                    stations = resp.json()
+                except Exception:
+                    continue
+                for s in stations:
+                    if str(s.get('frequency', '')).strip() == freq_mhz and is_valid(s.get('favicon', '')):
+                        logo_url = s['favicon']
+                        logger.info(f"Logo trouvé (freq exacte): {logo_url}")
+                        break
+                if not logo_url:
+                    for s in stations:
+                        if is_valid(s.get('favicon', '')):
+                            logo_url = s['favicon']
+                            logger.info(f"Logo trouvé (fallback): {logo_url}")
+                            break
+            if logo_url:
+                self._logo_searched = True
+                with self.stats_lock:
+                    self.stats['station_logo'] = logo_url
+            else:
+                self._logo_fail_count += 1
+                logger.info(f"Aucun logo trouvé pour {station_name} (échec #{self._logo_fail_count})")
+        except Exception as e:
+            logger.warning(f"Erreur recherche logo: {e}")
+
     def get_audio_chunk(self):
         """Récupère un chunk audio pour le streaming"""
         if not self.audio_enabled:
@@ -529,6 +615,7 @@ class FMMonitor:
 
         stats['signal_ok'] = self.signal_ok
         stats['frequency'] = self.rtl_config['frequency']
+        stats['station_logo'] = self.stats.get('station_logo')
 
         if stats['start_time']:
             stats['start_time'] = stats['start_time'].strftime('%d/%m/%Y %H:%M:%S')
@@ -539,6 +626,10 @@ class FMMonitor:
         """Arrête le moniteur"""
         logger.info("Arrêt du moniteur FM")
         self.running = False
+        self._logo_searched = False
+        self._logo_last_attempt = 0
+        self._logo_fail_count = 0
+        self.stats['station_logo'] = None
 
         if self.master_process:
             self.master_process.kill()
@@ -547,6 +638,15 @@ class FMMonitor:
         os.system("pkill -9 sox 2>/dev/null")
         os.system("pkill -9 ffmpeg 2>/dev/null")
         os.system("pkill -9 redsea 2>/dev/null")
+
+        # Attendre que tous les threads soient bien terminés
+        for attr in ['master_thread', 'monitor_thread', 'watchdog_thread',
+                     'stream_thread', 'db_writer_thread']:
+            t = getattr(self, attr, None)
+            if t and t.is_alive():
+                t.join(timeout=3)
+                if t.is_alive():
+                    logger.warning(f"Thread {attr} non terminé après 3s")
 
         # Supprimer le FIFO
         fifo_path = '/tmp/fm_stream.mp3'

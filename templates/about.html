@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>À propos - FM Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+  <!-- ====== Sidebar ====== -->
+  <aside class="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-gray-900 duration-300 ease-linear">
+    <div class="flex items-center justify-between gap-2 px-6 py-5.5">
+      <a href="/"><span class="text-xl font-semibold text-white">FM Monitor</span></a>
+    </div>
+    <div class="mx-6 mt-6 mb-6 rounded bg-green-900/20 border-l-4 border-green-500 p-4">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-xs font-semibold text-green-400 uppercase tracking-wide">Monitoring actif</span>
+      </div>
+      <div class="text-sm font-mono font-bold text-white" id="sidebar-frequency">-- MHz</div>
+    </div>
+    <nav class="px-4 pb-4">
+      <ul class="mb-6 flex flex-col gap-1.5">
+        <li>
+          <a href="/" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="/config" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Configuration
+          </a>
+        </li>
+        <li>
+          <a href="/stats" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            Statistiques
+          </a>
+        </li>
+        <li>
+          <a href="/about" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-white bg-gray-800">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            À propos
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            GitHub
+          </a>
+        </li>
+      </ul>
+      <div class="pt-6 mt-6 border-t border-gray-800">
+        <a href="/logout" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-red-900 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          Déconnexion
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ====== Main Content ====== -->
+  <div class="ml-72">
+    <header class="sticky top-0 z-40 flex w-full bg-white shadow-sm">
+      <div class="flex flex-grow items-center justify-between py-4 px-4 md:px-6 2xl:px-11">
+        <h1 class="text-2xl font-semibold text-gray-900">À propos de FM Monitor</h1>
+        <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          github.com/LyonelB/fm-monitor
+        </a>
+      </div>
+    </header>
+
+    <main class="p-4 md:p-6 2xl:p-10 space-y-6">
+
+      <!-- FM Monitor -->
+      <div class="rounded bg-white p-6 shadow">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+            <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">FM Monitor</h2>
+            <p class="text-gray-600 leading-relaxed">FM Monitor est un outil de supervision de diffusion radio FM conçu pour les radios, régies techniques et prestataires broadcast. Il surveille en continu la présence et la qualité du signal FM capté via un dongle RTL-SDR, envoie des alertes email en cas de coupure, décode les données RDS et offre un tableau de bord accessible depuis n'importe quel navigateur.</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Open Source</span>
+              <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Raspberry Pi / Linux</span>
+              <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">RTL-SDR</span>
+              <span class="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">Python / Flask</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture FM Monitor -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18"/></svg>
+          Comment fonctionne FM Monitor
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-gray-50 rounded-lg p-4 text-center">
+            <div class="text-3xl mb-2">📡</div>
+            <div class="font-semibold text-gray-800 text-sm mb-1">1. Capture RF</div>
+            <div class="text-xs text-gray-500">Le dongle RTL-SDR reçoit la porteuse FM. <code class="bg-gray-200 px-1 rounded">rtl_fm</code> démodule le signal FM en audio brut PCM.</div>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4 text-center">
+            <div class="text-3xl mb-2">🔊</div>
+            <div class="font-semibold text-gray-800 text-sm mb-1">2. Analyse audio</div>
+            <div class="text-xs text-gray-500">FM Monitor calcule le niveau RMS en dBFS en temps réel pour détecter les silences et mesurer la modulation.</div>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4 text-center">
+            <div class="text-3xl mb-2">📻</div>
+            <div class="font-semibold text-gray-800 text-sm mb-1">3. Décodage RDS</div>
+            <div class="text-xs text-gray-500"><code class="bg-gray-200 px-1 rounded">redsea</code> extrait les données RDS du flux MPX : PS, RadioText, PI Code.</div>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4 text-center">
+            <div class="text-3xl mb-2">🌐</div>
+            <div class="font-semibold text-gray-800 text-sm mb-1">4. Dashboard</div>
+            <div class="text-xs text-gray-500">Flask expose un dashboard web avec alertes email, historique BDD SQLite et streaming audio Icecast2.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- La diffusion FM -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+          La diffusion FM
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">📡 La porteuse RF</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">La diffusion FM utilise une porteuse radio dans la bande <strong>87.5 – 108 MHz</strong>. L'information audio est encodée par <strong>modulation de fréquence</strong> (FM) : la fréquence de la porteuse varie proportionnellement à l'amplitude du signal audio. La déviation maximale est de ±75 kHz, ce qui donne à la FM sa largeur de canal de ~200 kHz.</p>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 mb-2">〰️ Le signal MPX (Multiplex)</h3>
+            <p class="text-sm text-gray-600 leading-relaxed">Ce qui module la porteuse n'est pas directement l'audio stéréo, mais un signal composite appelé <strong>MPX</strong> (multiplex), composé de plusieurs sous-porteuses :</p>
+            <ul class="mt-2 space-y-1 text-sm text-gray-600">
+              <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span><span><strong>0 – 15 kHz</strong> : audio mono (L+R) — compatibilité mono</span></li>
+              <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span><span><strong>19 kHz</strong> : sous-porteuse pilote stéréo — indique aux récepteurs que le signal est stéréo</span></li>
+              <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span><span><strong>23 – 53 kHz</strong> : signal stéréo (L–R) en DSB-SC autour de 38 kHz</span></li>
+              <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span><span><strong>57 kHz</strong> : sous-porteuse RDS (Radio Data System)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Le RDS -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+          Le RDS — Radio Data System
+        </h2>
+        <p class="text-sm text-gray-600 mb-4">Le RDS est une norme (<strong>IEC 62106</strong>) permettant aux stations FM de transmettre des données numériques en parallèle de l'audio, modulées sur la sous-porteuse à <strong>57 kHz</strong>. Le débit est de 1187.5 bits/s, organisé en <em>groupes</em> de 104 bits.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="border border-purple-100 rounded-lg p-4 bg-purple-50">
+            <div class="font-bold text-purple-800 text-sm mb-1">PS — Programme Service</div>
+            <div class="text-xs text-gray-600 mb-2">Nom de la station affiché sur l'autoradio. Limité à <strong>8 caractères</strong>. Transmis en groupe <strong>0A/0B</strong>, se reçoit rapidement (~1-2 secondes).</div>
+            <div class="font-mono text-sm bg-white border border-purple-200 rounded px-3 py-2 text-center text-purple-700">GRAFFITI</div>
+          </div>
+          <div class="border border-blue-100 rounded-lg p-4 bg-blue-50">
+            <div class="font-bold text-blue-800 text-sm mb-1">RT — RadioText</div>
+            <div class="text-xs text-gray-600 mb-2">Texte libre jusqu'à <strong>64 caractères</strong> (RT+ : 128). Généralement le titre et l'artiste en cours. Transmis en groupe <strong>2A/2B</strong>, une trame complète prend ~20 secondes.</div>
+            <div class="font-mono text-xs bg-white border border-blue-200 rounded px-3 py-2 text-center text-blue-700">ERIK TRUFFAZ - Le compleme</div>
+          </div>
+          <div class="border border-green-100 rounded-lg p-4 bg-green-50">
+            <div class="font-bold text-green-800 text-sm mb-1">PI — Programme Identification</div>
+            <div class="text-xs text-gray-600 mb-2">Code hexadécimal <strong>unique</strong> sur 16 bits identifiant la station. Permet la commutation réseau et le suivi de station même en changement de fréquence. Exemple : <code>0xFA41</code> = Graffiti Urban Radio.</div>
+            <div class="font-mono text-sm bg-white border border-green-200 rounded px-3 py-2 text-center text-green-700">0xFA41</div>
+          </div>
+        </div>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>
+              <div class="font-semibold text-yellow-800 text-sm mb-1">Pourquoi le RadioText peut être partiel ?</div>
+              <p class="text-xs text-gray-600">Le RT est découpé en segments de 4 caractères, transmis successivement. <code>redsea</code> reçoit ces segments au fil de la réception et les reconstitue. Si la réception démarre en cours de séquence, ou si l'encodeur RDS de la station ne génère pas de trame "complète" conforme à la norme, seul un RT partiel est disponible. FM Monitor attend une séquence stable avant d'afficher le RadioText.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radio Browser -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+          Radio Browser
+        </h2>
+        <p class="text-sm text-gray-600 mb-4"><a href="https://www.radio-browser.info" target="_blank" class="text-blue-600 hover:underline">radio-browser.info</a> est une base de données collaborative et open source répertoriant des milliers de stations radio du monde entier. FM Monitor l'utilise pour récupérer automatiquement le <strong>logo de la station</strong> captée, en croisant le nom PS RDS avec la fréquence.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-50 rounded-lg p-4">
+            <div class="font-semibold text-gray-800 text-sm mb-2">Comment FM Monitor trouve le logo</div>
+            <ol class="space-y-1 text-xs text-gray-600 list-decimal list-inside">
+              <li>Réception du PS RDS (ex: "GRAFFITI")</li>
+              <li>Recherche sur Radio Browser avec le nom complet de la station (config) + fréquence</li>
+              <li>Priorité aux résultats dont la fréquence correspond exactement</li>
+              <li>Fallback sur le premier résultat avec un logo valide (PNG/JPG/SVG)</li>
+              <li>Logo mis en cache — une seule requête par session</li>
+            </ol>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4">
+            <div class="font-semibold text-gray-800 text-sm mb-2">Ma station n'a pas de logo ?</div>
+            <p class="text-xs text-gray-600 mb-3">Si votre station n'est pas référencée ou n'a pas de favicon dans Radio Browser, vous pouvez contribuer directement :</p>
+            <a href="https://www.radio-browser.info" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Ajouter ma station sur Radio Browser
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dongles supportés -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+          Dongles RTL-SDR supportés
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dongle</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Puce</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Drivers</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-900">RTL-SDR Blog V3</td>
+                <td class="px-4 py-3 text-gray-600 font-mono text-xs">RTL2832U + R820T2</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">rtl-sdr standard</span></td>
+                <td class="px-4 py-3 text-gray-500 text-xs">Drivers inclus dans la plupart des distributions. Plug & play.</td>
+              </tr>
+              <tr class="hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-medium text-gray-900">RTL-SDR Blog V4 <span class="ml-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">Recommandé</span></td>
+                <td class="px-4 py-3 text-gray-600 font-mono text-xs">RTL2832U + R828D</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">rtl-sdr-blog (fork)</span></td>
+                <td class="px-4 py-3 text-gray-500 text-xs">Meilleure sensibilité FM, TCXO 1ppm. Nécessite le fork officiel et le blacklist du driver noyau.</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-900">Nooelec NESDR SMArt v5</td>
+                <td class="px-4 py-3 text-gray-600 font-mono text-xs">RTL2832U + R820T2</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">rtl-sdr standard</span></td>
+                <td class="px-4 py-3 text-gray-500 text-xs">Compatible standard. Boîtier aluminium anti-interférences.</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-900">Autres RTL2832U</td>
+                <td class="px-4 py-3 text-gray-600 font-mono text-xs">RTL2832U</td>
+                <td class="px-4 py-3"><span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">rtl-sdr standard</span></td>
+                <td class="px-4 py-3 text-gray-500 text-xs">Généralement compatibles. Résultats variables selon la qualité du tuner.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Installation V4 -->
+        <div class="mt-6 border border-blue-200 rounded-lg overflow-hidden">
+          <div class="bg-blue-600 px-4 py-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-white text-sm font-semibold">Installation RTL-SDR Blog V4 (Raspberry Pi / Debian / Ubuntu)</span>
+          </div>
+          <div class="p-4 bg-gray-900 overflow-x-auto">
+            <pre class="text-green-400 text-xs leading-relaxed"># 1. Bloquer le driver noyau générique
+echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtl.conf
+sudo modprobe -r dvb_usb_rtl28xxu 2>/dev/null
+
+# 2. Dépendances
+sudo apt update
+sudo apt install -y git cmake libusb-1.0-0-dev build-essential pkg-config
+
+# 3. Compiler le fork officiel RTL-SDR Blog
+git clone https://github.com/rtlsdrblog/rtl-sdr-blog
+cd rtl-sdr-blog && mkdir build && cd build
+cmake .. -DINSTALL_UDEV_RULES=ON
+make -j$(nproc) && sudo make install && sudo ldconfig
+
+# 4. Règles udev (accès sans sudo)
+sudo cp ~/rtl-sdr-blog/rtl-sdr.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# 5. Test
+rtl_test -t</pre>
+          </div>
+        </div>
+
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-amber-800">
+          <strong>⚠️ Bias-T (V4) :</strong> Le RTL-SDR Blog V4 dispose d'une alimentation antenne (Bias-T) de 4.5V désactivée par défaut. Ne l'activez que si votre antenne ou amplificateur le nécessite : <code class="bg-amber-100 px-1 rounded">rtl_biast -b 1</code>
+        </div>
+      </div>
+
+      <!-- Liens -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">Liens utiles</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition">
+            <svg class="w-8 h-8 text-gray-800 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            <div>
+              <div class="font-semibold text-gray-900 text-sm">FM Monitor sur GitHub</div>
+              <div class="text-xs text-gray-500">Code source, issues, contributions</div>
+            </div>
+          </a>
+          <a href="https://www.radio-browser.info" target="_blank" class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition">
+            <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064"/></svg>
+            </div>
+            <div>
+              <div class="font-semibold text-gray-900 text-sm">Radio Browser</div>
+              <div class="text-xs text-gray-500">Base de données collaborative de radios</div>
+            </div>
+          </a>
+          <a href="https://www.rtl-sdr.com" target="_blank" class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+            </div>
+            <div>
+              <div class="font-semibold text-gray-900 text-sm">RTL-SDR Blog</div>
+              <div class="text-xs text-gray-500">Dongles, drivers V4, tutoriels SDR</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Charger la fréquence dans la sidebar
+    fetch('/api/stats').then(r => r.json()).then(data => {
+      if (data.frequency) {
+        const f = parseFloat(data.frequency);
+        document.getElementById('sidebar-frequency').textContent = (f/1e6).toFixed(1) + ' MHz';
+      }
+    }).catch(() => {});
+  </script>
+
+</body>
+</html>
