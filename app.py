@@ -516,7 +516,7 @@ def proxy_stream():
     def generate():
         try:
             # Connexion au stream Icecast en HTTPS (verify=False car certificat auto-signé)
-            with requests.get('https://localhost:8443/fmmonitor', stream=True, verify=False, timeout=5) as r:
+            with requests.get('http://localhost:8000/fmmonitor', stream=True, timeout=5) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:

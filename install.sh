@@ -3,19 +3,17 @@
 # FM Monitor - Installation automatique
 # Compatible: Raspberry Pi OS (Debian/Ubuntu)
 #
-# Usage: curl -sSL https://raw.githubusercontent.com/user/fm-monitor/main/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/LyonelB/fm-monitor/main/install.sh | bash
 #
 
-set -e  # Arrêter en cas d'erreur
+set -e
 
-# Couleurs pour l'affichage
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Fonctions d'affichage
 print_header() {
     echo -e "${BLUE}"
     echo "=========================================="
@@ -24,28 +22,15 @@ print_header() {
     echo -e "${NC}"
 }
 
-print_step() {
-    echo -e "${GREEN}[✓]${NC} $1"
-}
+print_step()    { echo -e "${GREEN}[✓]${NC} $1"; }
+print_info()    { echo -e "${BLUE}[i]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[!]${NC} $1"; }
+print_error()   { echo -e "${RED}[✗]${NC} $1"; }
 
-print_info() {
-    echo -e "${BLUE}[i]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
-
-# Variables
 INSTALL_DIR="$HOME/fm-monitor"
 GITHUB_REPO="https://github.com/LyonelB/fm-monitor.git"
-PYTHON_VERSION="3.9"
+ICECAST_PASSWORD="fmmonitor2026"
 
-# Vérification root
 if [ "$EUID" -eq 0 ]; then
     print_error "Ne lancez pas ce script en root (pas de sudo)"
     print_info "Le script demandera sudo uniquement quand nécessaire"
@@ -55,31 +40,36 @@ fi
 print_header
 
 # =============================================
+# ÉTAPE PRÉLIMINAIRE : BRANCHEMENT DU DONGLE
+# =============================================
+echo ""
+print_warning "╔══════════════════════════════════════════════╗"
+print_warning "║  BRANCHEZ MAINTENANT la clé RTL-SDR          ║"
+print_warning "║  dans un port USB de votre Raspberry Pi      ║"
+print_warning "╚══════════════════════════════════════════════╝"
+echo ""
+read -p "Appuyez sur Entrée une fois la clé RTL-SDR branchée..."
+
+# =============================================
 # 1. VÉRIFICATION DU SYSTÈME
 # =============================================
 print_step "Vérification du système..."
 
-# Vérifier l'OS
 if [ -f /etc/os-release ]; then
     . /etc/os-release
-    OS=$ID
-    VERSION=$VERSION_ID
     print_info "OS détecté: $PRETTY_NAME"
 else
     print_error "Impossible de détecter l'OS"
     exit 1
 fi
 
-# Vérifier si Raspberry Pi
 if [ -f /proc/device-tree/model ]; then
     RPI_MODEL=$(cat /proc/device-tree/model)
     print_info "Raspberry Pi détecté: $RPI_MODEL"
 fi
 
-# Vérifier Python
 if command -v python3 &> /dev/null; then
-    PYTHON_INSTALLED=$(python3 --version | awk '{print $2}')
-    print_info "Python installé: $PYTHON_INSTALLED"
+    print_info "Python installé: $(python3 --version)"
 else
     print_error "Python 3 n'est pas installé"
     exit 1
@@ -92,7 +82,7 @@ print_step "Mise à jour du système..."
 sudo apt update -qq
 
 # =============================================
-# 3. INSTALLATION DES DÉPENDANCES
+# 3. INSTALLATION DES DÉPENDANCES SYSTÈME
 # =============================================
 print_step "Installation des dépendances système..."
 
@@ -100,15 +90,20 @@ PACKAGES=(
     "python3-pip"
     "python3-venv"
     "rtl-sdr"
-    "sox"
-    "libsox-fmt-all"
-    "lame"
+    "ffmpeg"
+    "icecast2"
     "git"
     "openssl"
+    "coreutils"
+    "build-essential"
+    "meson"
+    "ninja-build"
+    "libsndfile1-dev"
+    "libliquid-dev"
 )
 
 for package in "${PACKAGES[@]}"; do
-    if dpkg -l | grep -q "^ii  $package "; then
+    if dpkg -l 2>/dev/null | grep -q "^ii  $package "; then
         print_info "$package déjà installé"
     else
         print_info "Installation de $package..."
@@ -117,7 +112,56 @@ for package in "${PACKAGES[@]}"; do
 done
 
 # =============================================
-# 4. TÉLÉCHARGEMENT/CLONAGE DE FM MONITOR
+# 4. INSTALLATION DE REDSEA (décodeur RDS)
+# =============================================
+print_step "Installation de redsea (décodeur RDS)..."
+
+if command -v redsea &> /dev/null; then
+    print_info "redsea déjà installé: $(redsea --version 2>&1 | head -1)"
+else
+    print_info "Compilation de redsea depuis les sources (quelques minutes)..."
+    REDSEA_TMP=$(mktemp -d)
+    git clone --quiet https://github.com/windytan/redsea.git "$REDSEA_TMP"
+    cd "$REDSEA_TMP"
+    meson setup build --quiet
+    ninja -C build -j$(nproc) 2>/dev/null
+    sudo ninja -C build install 2>/dev/null
+    cd -
+    rm -rf "$REDSEA_TMP"
+
+    if command -v redsea &> /dev/null; then
+        print_info "redsea installé: $(redsea --version 2>&1 | head -1)"
+    else
+        print_error "Échec de l'installation de redsea"
+        exit 1
+    fi
+fi
+
+# =============================================
+# 5. CONFIGURATION ICECAST2
+# =============================================
+print_step "Configuration d'Icecast2..."
+
+ICECAST_CONF="/etc/icecast2/icecast.xml"
+if [ -f "$ICECAST_CONF" ]; then
+    sudo cp "$ICECAST_CONF" "${ICECAST_CONF}.bak"
+    sudo python3 -c "
+with open('$ICECAST_CONF', 'r') as f:
+    content = f.read()
+content = content.replace('<source-password></source-password>', '<source-password>$ICECAST_PASSWORD</source-password>')
+with open('$ICECAST_CONF', 'w') as f:
+    f.write(content)
+print('  mot de passe source configuré')
+"
+    sudo systemctl enable icecast2
+    sudo systemctl restart icecast2
+    print_info "Icecast2 configuré et démarré"
+else
+    print_warning "icecast.xml non trouvé - configuration manuelle requise"
+fi
+
+# =============================================
+# 6. TÉLÉCHARGEMENT DE FM MONITOR
 # =============================================
 print_step "Installation de FM Monitor..."
 
@@ -135,45 +179,45 @@ if [ -d "$INSTALL_DIR" ]; then
     fi
 fi
 
-# Option 1 : Clone depuis GitHub (si dispo)
-if [ -n "$GITHUB_REPO" ] && git ls-remote "$GITHUB_REPO" &> /dev/null; then
+if git ls-remote "$GITHUB_REPO" &> /dev/null; then
     print_info "Clonage depuis GitHub..."
-    git clone "$GITHUB_REPO" "$INSTALL_DIR"
+    git clone --quiet "$GITHUB_REPO" "$INSTALL_DIR"
 else
-    # Option 2 : Créer la structure manuellement
-    print_info "Création de la structure..."
-    mkdir -p "$INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR/templates"
-    mkdir -p "$INSTALL_DIR/static"
-    
-    print_warning "Les fichiers sources doivent être copiés manuellement dans $INSTALL_DIR"
+    print_error "Impossible d'accéder à GitHub"
+    exit 1
 fi
 
 cd "$INSTALL_DIR"
 
+# Corriger l'URL du proxy stream (http:8000 au lieu de https:8443)
+python3 -c "
+with open('app.py', 'r') as f:
+    c = f.read()
+old = \"with requests.get('https://localhost:8443/fmmonitor', stream=True, verify=False, timeout=5) as r:\"
+new = \"with requests.get('http://localhost:8000/fmmonitor', stream=True, timeout=5) as r:\"
+if old in c:
+    with open('app.py', 'w') as f: f.write(c.replace(old, new))
+" 2>/dev/null || true
+
 # =============================================
-# 5. ENVIRONNEMENT VIRTUEL PYTHON
+# 7. ENVIRONNEMENT VIRTUEL PYTHON
 # =============================================
 print_step "Création de l'environnement virtuel Python..."
 
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-fi
-
+python3 -m venv venv
 source venv/bin/activate
 
 # =============================================
-# 6. INSTALLATION DES PACKAGES PYTHON
+# 8. INSTALLATION DES PACKAGES PYTHON
 # =============================================
 print_step "Installation des packages Python..."
 
-# Packages de base
-pip install --quiet --upgrade pip
+pip install --quiet --upgrade pip setuptools wheel
 
 PYTHON_PACKAGES=(
     "flask==3.0.0"
-    "numpy==1.24.3"
-    "redsea==0.18.1"
+    "numpy"
+    "requests"
     "flask-bcrypt==1.0.1"
     "Flask-Limiter==3.5.0"
     "python-dotenv==1.0.0"
@@ -188,35 +232,40 @@ done
 deactivate
 
 # =============================================
-# 7. CONFIGURATION INITIALE
+# 9. CONFIGURATION INITIALE
 # =============================================
 print_step "Configuration initiale..."
 
-# Créer config.json si absent
 if [ ! -f "config.json" ]; then
     print_info "Création de config.json..."
     cat > config.json << 'EOF'
 {
   "station": {
     "name": "Ma Radio FM",
-    "frequency": "88.6M"
+    "frequency": "88.6M",
+    "frequency_display": "88.6 MHz"
   },
   "rtl_sdr": {
     "frequency": "88.6M",
     "sample_rate": "1140000",
-    "gain": "auto",
-    "device_index": "0"
+    "gain": "40",
+    "device_index": "0",
+    "ppm_error": 0
   },
   "audio": {
+    "output_rate": "44100",
     "silence_threshold": -40.0,
-    "silence_duration": 15
+    "silence_duration": 15,
+    "enabled": true
   },
   "email": {
     "sender_email": "",
     "sender_password": "",
     "recipient_emails": [],
     "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587
+    "smtp_port": 587,
+    "enabled": false,
+    "use_tls": true
   },
   "network": {
     "mode": "dhcp",
@@ -226,23 +275,35 @@ if [ ! -f "config.json" ]; then
     "dns": "",
     "wifi_ssid": "",
     "wifi_password": ""
-  },
-  "auth": {
-    "username": "admin",
-    "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzS9qvZiCm"
   }
 }
 EOF
+    # Générer le hash bcrypt pour "password"
+    print_info "Génération du hash du mot de passe par défaut..."
+    source venv/bin/activate
+    PW_HASH=$(python3 -c "
+from flask_bcrypt import Bcrypt
+from flask import Flask
+app = Flask(__name__)
+bcrypt = Bcrypt(app)
+print(bcrypt.generate_password_hash('password').decode('utf-8'))
+")
+    deactivate
+    python3 -c "
+import json
+with open('config.json') as f:
+    c = json.load(f)
+c['auth'] = {'username': 'admin', 'password_hash': '$PW_HASH'}
+with open('config.json', 'w') as f:
+    json.dump(c, f, indent=2)
+"
     print_info "Mot de passe par défaut: 'password' (à changer !)"
 fi
 
-# Créer fichier .env
 if [ ! -f ".env" ]; then
     print_info "Génération de la clé secrète..."
     SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-    
     cat > .env << EOF
-# FM Monitor - Variables d'environnement
 SECRET_KEY=$SECRET_KEY
 FLASK_ENV=production
 EOF
@@ -250,18 +311,16 @@ EOF
 fi
 
 # =============================================
-# 8. GÉNÉRATION DU CERTIFICAT SSL
+# 10. GÉNÉRATION DU CERTIFICAT SSL
 # =============================================
 print_step "Génération du certificat SSL..."
 
 if [ ! -f "cert.pem" ] || [ ! -f "key.pem" ]; then
     openssl req -x509 -newkey rsa:4096 -nodes \
-        -out cert.pem \
-        -keyout key.pem \
+        -out cert.pem -keyout key.pem \
         -days 3650 \
         -subj "/C=FR/ST=France/L=Paris/O=FM Monitor/OU=Radio/CN=fm-monitor.local" \
         2>/dev/null
-    
     chmod 644 cert.pem
     chmod 600 key.pem
     print_info "Certificat SSL généré (valide 10 ans)"
@@ -270,20 +329,21 @@ else
 fi
 
 # =============================================
-# 9. SERVICE SYSTEMD
+# 11. SERVICE SYSTEMD
 # =============================================
 print_step "Configuration du service systemd..."
 
 sudo tee /etc/systemd/system/fm-monitor.service > /dev/null << EOF
 [Unit]
 Description=FM Radio Monitoring System
-After=network.target
+After=network.target icecast2.service
+Requires=icecast2.service
 
 [Service]
 Type=simple
 User=$USER
 WorkingDirectory=$INSTALL_DIR
-Environment="PATH=$INSTALL_DIR/venv/bin"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$INSTALL_DIR/venv/bin"
 ExecStart=$INSTALL_DIR/venv/bin/python3 $INSTALL_DIR/app.py
 Restart=always
 RestartSec=10
@@ -292,57 +352,51 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Recharger systemd
 sudo systemctl daemon-reload
-
-# Activer le service au démarrage
 sudo systemctl enable fm-monitor
-
 print_info "Service systemd configuré"
 
 # =============================================
-# 10. PERMISSIONS
+# 12. PERMISSIONS RTL-SDR
 # =============================================
-print_step "Configuration des permissions..."
+print_step "Configuration des permissions RTL-SDR..."
 
-# Donner accès au RTL-SDR
-if [ -f /etc/udev/rules.d/20-rtlsdr.rules ]; then
-    print_info "Règles udev RTL-SDR déjà configurées"
-else
+if [ ! -f /etc/udev/rules.d/20-rtlsdr.rules ]; then
     sudo tee /etc/udev/rules.d/20-rtlsdr.rules > /dev/null << 'EOF'
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", GROUP="plugdev", MODE="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2832", GROUP="plugdev", MODE="0666"
 EOF
-    sudo udevadm control --reload-rules
-    sudo udevadm trigger
     print_info "Règles udev RTL-SDR ajoutées"
+else
+    print_info "Règles udev RTL-SDR déjà configurées"
 fi
 
-# Ajouter l'utilisateur au groupe plugdev
+sudo udevadm control --reload-rules
+sudo udevadm trigger
 sudo usermod -a -G plugdev "$USER"
 
 # =============================================
-# 11. VÉRIFICATION
+# 13. VÉRIFICATION
 # =============================================
 print_step "Vérification de l'installation..."
 
-# Vérifier RTL-SDR
 if rtl_test -t 2>&1 | grep -q "Found"; then
-    print_info "RTL-SDR détecté"
+    print_info "RTL-SDR détecté ✓"
 else
-    print_warning "RTL-SDR non détecté (branchez le dongle USB)"
+    print_warning "RTL-SDR non détecté - vérifiez le branchement USB"
 fi
 
-# Vérifier que tous les fichiers critiques existent
-CRITICAL_FILES=(
-    "app.py"
-    "monitor.py"
-    "auth.py"
-    "config.json"
-    ".env"
-    "cert.pem"
-    "key.pem"
-)
+if sudo systemctl is-active --quiet icecast2; then
+    print_info "Icecast2 actif ✓"
+else
+    print_warning "Icecast2 inactif - vérifiez: sudo systemctl status icecast2"
+fi
 
+if command -v redsea &> /dev/null; then
+    print_info "redsea installé ✓"
+fi
+
+CRITICAL_FILES=("app.py" "monitor.py" "auth.py" "config.json" ".env" "cert.pem" "key.pem")
 missing_files=0
 for file in "${CRITICAL_FILES[@]}"; do
     if [ ! -f "$file" ]; then
@@ -350,61 +404,49 @@ for file in "${CRITICAL_FILES[@]}"; do
         missing_files=$((missing_files + 1))
     fi
 done
-
-if [ $missing_files -gt 0 ]; then
-    print_warning "$missing_files fichier(s) manquant(s)"
-    print_info "Copiez les fichiers sources dans $INSTALL_DIR"
+if [ $missing_files -eq 0 ]; then
+    print_info "Tous les fichiers critiques présents ✓"
 fi
 
 # =============================================
-# 12. FINALISATION
+# 14. FINALISATION
 # =============================================
 echo ""
 echo -e "${GREEN}=========================================="
 echo "   Installation terminée !"
 echo -e "==========================================${NC}"
 echo ""
-
-print_info "Résumé de l'installation:"
-echo "  • Répertoire: $INSTALL_DIR"
-echo "  • Service: fm-monitor.service"
-echo "  • URL: https://$(hostname -I | awk '{print $1}'):5000"
+print_info "Résumé:"
+echo "  • Répertoire : $INSTALL_DIR"
+echo "  • URL        : https://$(hostname -I | awk '{print $1}'):5000"
 echo ""
-
-print_info "Commandes utiles:"
-echo "  • Démarrer:  sudo systemctl start fm-monitor"
-echo "  • Arrêter:   sudo systemctl stop fm-monitor"
-echo "  • Statut:    sudo systemctl status fm-monitor"
-echo "  • Logs:      sudo journalctl -u fm-monitor -f"
-echo ""
-
 print_info "Identifiants par défaut:"
-echo "  • Username:  admin"
-echo "  • Password:  password"
-echo -e "  ${RED}⚠️  CHANGEZ LE MOT DE PASSE IMMÉDIATEMENT !${NC}"
+echo "  • Username : admin"
+echo "  • Password : password"
+echo -e "  ${RED}⚠️  CHANGEZ LE MOT DE PASSE dans Configuration > Sécurité${NC}"
+echo ""
+print_info "Commandes utiles:"
+echo "  • Démarrer : sudo systemctl start fm-monitor"
+echo "  • Arrêter  : sudo systemctl stop fm-monitor"
+echo "  • Statut   : sudo systemctl status fm-monitor"
+echo "  • Logs     : sudo journalctl -u fm-monitor -f"
 echo ""
 
-# Demander si on démarre le service
 read -p "Voulez-vous démarrer FM Monitor maintenant ? (o/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Oo]$ ]]; then
     sudo systemctl start fm-monitor
-    sleep 2
-    
+    sleep 3
     if sudo systemctl is-active --quiet fm-monitor; then
-        print_step "FM Monitor démarré avec succès !"
+        print_step "FM Monitor démarré !"
         print_info "Accédez à https://$(hostname -I | awk '{print $1}'):5000"
     else
         print_error "Erreur au démarrage"
-        print_info "Vérifiez les logs: sudo journalctl -u fm-monitor -n 50"
+        print_info "Diagnostic: sudo journalctl -u fm-monitor -n 50"
     fi
 else
-    print_info "Pour démarrer plus tard: sudo systemctl start fm-monitor"
+    print_info "Pour démarrer: sudo systemctl start fm-monitor"
 fi
 
 echo ""
-print_info "Documentation: https://github.com/LyonelB/fm-monitor/wiki"
-print_info "Support: https://github.com/LyonelB/fm-monitor/issues"
-echo ""
-
-print_step "Installation terminée ! 🎉"
+print_step "Terminé ! 🎉"
