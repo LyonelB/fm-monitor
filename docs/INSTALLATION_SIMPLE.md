@@ -236,7 +236,6 @@ sudo apt remove rtl-sdr sox lame
 
 - **Documentation** : [GitHub Wiki](https://github.com/LyonelB/fm-monitor/wiki)
 - **Issues** : [GitHub Issues](https://github.com/LyonelB/fm-monitor/issues)
-- **Email** : support@fm-monitor.com
 
 ---
 
