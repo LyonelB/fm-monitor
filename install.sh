@@ -455,20 +455,15 @@ echo "  • Statut   : sudo systemctl status fm-monitor"
 echo "  • Logs     : sudo journalctl -u fm-monitor -f"
 echo ""
 
-read -p "Voulez-vous démarrer FM Monitor maintenant ? (o/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Oo]$ ]]; then
-    sudo systemctl start fm-monitor
-    sleep 3
-    if sudo systemctl is-active --quiet fm-monitor; then
-        print_step "FM Monitor démarré !"
-        print_info "Accédez à https://$(hostname -I | awk '{print $1}'):5000"
-    else
-        print_error "Erreur au démarrage"
-        print_info "Diagnostic: sudo journalctl -u fm-monitor -n 50"
-    fi
+print_step "Démarrage de FM Monitor..."
+sudo systemctl start fm-monitor
+sleep 3
+if sudo systemctl is-active --quiet fm-monitor; then
+    print_step "FM Monitor démarré !"
+    print_info "Accédez à https://$(hostname -I | awk '{print $1}'):5000"
 else
-    print_info "Pour démarrer: sudo systemctl start fm-monitor"
+    print_error "Erreur au démarrage"
+    print_info "Diagnostic: sudo journalctl -u fm-monitor -n 50"
 fi
 
 echo ""

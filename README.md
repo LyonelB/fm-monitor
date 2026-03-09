@@ -78,6 +78,28 @@ rtl_test -t
 
 ## 🚀 Installation
 
+### ⚡ Installation automatique (recommandée)
+
+> ⚠️ **Bonne pratique** : avant d'exécuter un script distant, inspectez-le :
+> ```bash
+> curl -sSL https://raw.githubusercontent.com/LyonelB/fm-monitor/main/install.sh -o install.sh
+> less install.sh
+> bash install.sh
+> ```
+
+Ou directement si vous faites confiance à la source :
+```bash
+curl -sSL https://raw.githubusercontent.com/LyonelB/fm-monitor/main/install.sh | bash
+```
+
+Le script installe automatiquement toutes les dépendances, compile redsea, configure Icecast2, génère les certificats SSL et démarre le service.
+
+**Durée : ~10-15 minutes** (compilation de redsea incluse)
+
+---
+
+### 🔧 Installation manuelle
+
 ### Prérequis système
 
 - Raspberry Pi 3/4/5 ou mini-PC Linux (Debian 12 / Ubuntu 22.04+)
