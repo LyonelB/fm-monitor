@@ -182,42 +182,6 @@ def stream_stats():
         }
     )
 
-@app.route('/api/services/status')
-@limiter.exempt
-def get_services_status():
-    """Retourne l'état de tous les services"""
-    if monitor:
-        return jsonify({'status': 'success', 'services': monitor.get_services_status()})
-    return jsonify({'status': 'error', 'message': 'Monitor not initialized'}), 503
-
-@app.route('/api/services/toggle', methods=['POST'])
-def toggle_service():
-    """Active ou désactive un service"""
-    try:
-        data = request.get_json()
-        service = data.get('service')
-        enabled = data.get('enabled')
-
-        if service is None or enabled is None:
-            return jsonify({'status': 'error', 'message': 'Paramètres manquants'}), 400
-
-        if monitor:
-            success = monitor.toggle_service(service, enabled)
-            if success:
-                return jsonify({
-                    'status': 'success',
-                    'service': service,
-                    'enabled': enabled,
-                    'services': monitor.get_services_status()
-                })
-            else:
-                return jsonify({'status': 'error', 'message': f'Service inconnu: {service}'}), 400
-
-        return jsonify({'status': 'error', 'message': 'Monitor not initialized'}), 503
-
-    except Exception as e:
-        logger.error(f"Erreur toggle service: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/config/full')
 def get_config_full():
