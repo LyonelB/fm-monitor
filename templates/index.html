@@ -356,17 +356,13 @@
         </div>
       </div>
 
-      <!-- Historique des niveaux audio -->
+      <!-- Historique des niveaux audio (temps réel) -->
       <div class="mb-6 rounded bg-white p-6 shadow">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Historique des niveaux audio (24h)</h3>
-          <select id="history-zoom" class="text-sm border-gray-300 rounded px-3 py-1.5">
-            <option value="24">24 heures</option>
-            <option value="2">2 heures</option>
-            <option value="1">1 heure</option>
-          </select>
+          <h3 class="text-lg font-semibold text-gray-900">Niveaux audio — 30 dernières secondes</h3>
+          <span class="text-xs text-gray-400 font-mono" id="realtime-chart-status">En direct</span>
         </div>
-        <div class="h-80">
+        <div class="h-48">
           <canvas id="audioChart"></canvas>
         </div>
       </div>
@@ -736,98 +732,91 @@
     // =============================================
     // HISTORIQUE AUDIO
     // =============================================
+    // =============================================
+    // GRAPHIQUE TEMPS RÉEL (30 secondes)
+    // =============================================
+    const REALTIME_WINDOW = 300;      // 30s × 10 pts/sec
+    const REALTIME_INTERVAL = 100;    // 10 Hz
     let audioChart = null;
-    let historyData = [];
+    let realtimeLabels = [];
+    let realtimeData = [];
+    let lastRealtimePush = 0;
 
-    async function loadAudioHistory() {
-        // Ne charger l'historique que si le service est activé
-        if (!servicesStatus.history) {
-            console.log('Service Historique désactivé, requête ignorée');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/audio/history');
-            const data = await response.json();
-
-            if (data.status === 'success' && data.data) {
-                historyData = data.data;
-                updateHistoryChart();
-            }
-        } catch (error) {
-            console.error('Erreur historique audio:', error);
-        }
-    }
-
-    function updateHistoryChart() {
-        // Ne rien faire si le service Historique est désactivé
-        if (!servicesStatus.history) {
-            return;
-        }
-
-        const zoom = parseInt(document.getElementById('history-zoom').value);
-
-        // Filtrer selon le zoom
-        const now = new Date();
-        const cutoff = new Date(now.getTime() - (zoom * 60 * 60 * 1000));
-        const filtered = historyData.filter(d => new Date(d.timestamp) >= cutoff);
-
-        const labels = filtered.map(d => {
-            const date = new Date(d.timestamp);
-            return date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        });
-
-        const levels = filtered.map(d => d.level_db);
-
+    function initRealtimeChart() {
         const ctx = document.getElementById('audioChart').getContext('2d');
-
-        if (audioChart) {
-            audioChart.destroy();
-        }
-
         audioChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: realtimeLabels,
                 datasets: [{
                     label: 'Niveau audio (dBFS)',
-                    data: levels,
+                    data: realtimeData,
                     borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
                     borderWidth: 2,
                     pointRadius: 0,
-                    tension: 0.4
+                    tension: 0.3,
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    }
+                    legend: { display: false }
                 },
                 scales: {
                     y: {
-                        beginAtZero: false,
-                        min: -100,
-                        max: 0,
-                        title: {
-                            display: true,
-                            text: 'Niveau (dBFS)'
-                        }
+                        // Pas de min/max fixe — calculé dynamiquement dans pushRealtimeLevel
+                        title: { display: true, text: 'dBFS' },
+                        ticks: { stepSize: 10 },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
                     },
                     x: {
-                        ticks: {
-                            maxTicksLimit: 12
-                        }
+                        ticks: { maxTicksLimit: 6, maxRotation: 0 },
+                        grid: { display: false }
                     }
                 }
             }
         });
     }
 
-    document.getElementById('history-zoom').addEventListener('change', updateHistoryChart);
+    function pushRealtimeLevel(levelDb) {
+        if (!servicesStatus.history) return;
+
+        // Throttle strict : 1 point maximum par seconde
+        const now = Date.now();
+        if (now - lastRealtimePush < REALTIME_INTERVAL) return;
+        lastRealtimePush = now;
+
+        const label = new Date(now).toLocaleTimeString('fr-FR', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        realtimeLabels.push(label);
+        realtimeData.push(Math.round(levelDb * 10) / 10);
+
+        if (realtimeLabels.length > REALTIME_WINDOW) {
+            realtimeLabels.shift();
+            realtimeData.shift();
+        }
+
+        if (audioChart && realtimeData.length > 0) {
+            // Adapter l'axe Y dynamiquement avec une marge de 5 dB
+            const dMin = Math.min(...realtimeData);
+            const dMax = Math.max(...realtimeData);
+            const margin = 5;
+            audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
+            audioChart.options.scales.y.max = Math.min(0, Math.ceil((dMax + margin) / 10) * 10);
+            audioChart.update('none');
+        }
+    }
+
+    // Fonctions compatibilité (conservées pour ne pas casser le reste)
+    let historyData = [];
+    function loadAudioHistory() {}
+    function updateHistoryChart() {}
 
     // =============================================
     // SERVER-SENT EVENTS (SSE)
@@ -858,6 +847,9 @@
                 if (servicesStatus.vu_meter) {
                     updateVUMeter(levelPercent);
                 }
+
+                // Graphique temps réel
+                pushRealtimeLevel(level);
 
                 // PS/RT seulement si RDS auto actif
                 if (servicesStatus.rds) {
@@ -898,6 +890,7 @@
     loadConfig();
     updateStats();
     loadServicesStatus();
+    initRealtimeChart();
     connectSSE();
 
     setInterval(updateTime, 1000);
