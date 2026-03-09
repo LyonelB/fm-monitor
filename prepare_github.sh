@@ -106,3 +106,4 @@ echo "  5. Créer une release sur GitHub"
 echo ""
 
 print_step "Préparation terminée !"
+

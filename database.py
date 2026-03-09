@@ -247,3 +247,4 @@ class FMDatabase:
         except Exception as e:
             logger.error(f"Erreur nettoyage: {e}")
             return 0
+

@@ -56,3 +56,4 @@ echo "Pour accepter le certificat :"
 echo "   1. Cliquez sur 'Avancé' ou 'Advanced'"
 echo "   2. Cliquez sur 'Continuer vers le site' ou 'Proceed'"
 echo ""
+

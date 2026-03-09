@@ -103,3 +103,4 @@ fi
 echo ""
 print_info "Changelog: https://github.com/LyonelB/fm-monitor/releases"
 echo ""
+

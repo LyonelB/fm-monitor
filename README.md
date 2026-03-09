@@ -1,6 +1,6 @@
 # 📻 FM Monitor
 
-![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20%7C%20Linux-lightgrey.svg)
@@ -274,10 +274,11 @@ tail -f /tmp/rds_output.json
 
 ## 🗺️ Roadmap
 
-- [x] v0.3.1 — Streaming Icecast2 professionnel, SSL, CSRF
+- [x] v0.3.1 — Streaming Icecast2 professionnel, SSL, système de licences
 - [x] v0.3.2 — Open source, RTL-SDR Blog V4, logo Radio Browser, page documentation
-- [ ] v0.3.3 — Monitoring RDS (présence, stabilité), script install automatique
-- [ ] v0.4.x — Support TEF6686 (Headless TEF Lite) — démodulation stéréo hardware, RDS natif
+- [x] v0.4.0 — Script install automatique, historique niveaux audio, nettoyage interface
+- [ ] v0.4.x — Monitoring RDS (présence, stabilité)
+- [ ] v0.5.x — Support TEF6686 (Headless TEF Lite) — démodulation stéréo hardware, RDS natif
 
 ---
 

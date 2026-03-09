@@ -159,3 +159,4 @@ class Auth:
         except Exception as e:
             logger.error(f"Erreur lors de la vérification du mot de passe: {e}")
             return False
+

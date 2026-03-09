@@ -5,6 +5,39 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.4.0] - 2026-03-09
+
+### 🎉 Fonctionnalités
+
+#### Script d'installation automatique
+- **`install.sh`** : Installation complète en une commande — dépendances système, compilation redsea, configuration Icecast2, certificats SSL, service systemd
+- **Durée estimée** : ~10-15 minutes (compilation redsea incluse)
+
+#### Nouvel affichage historique des niveaux audio
+- **Graphique historique repensé** : Visualisation plus claire des niveaux audio sur 24h
+- **Meilleure lisibilité** : Distinction visuelle améliorée entre silence, signal faible et signal normal
+
+### 🔧 Modifications
+
+#### Suppression du contrôle des services
+- **Retrait du panneau de contrôle des services** depuis l'interface web (start/stop/restart)
+- Le Pi 3B+ gère les services de manière autonome via systemd — le contrôle manuel est superflu
+
+### 🛠️ Maintenance
+
+- **Nettoyage dépôt GitHub** : Harmonisation des messages de commit, suppression des références à l'ancienne numérotation interne
+- **`config.json.example`** : Fichier d'exemple épuré sans données sensibles
+
+### ⚠️ Breaking Changes
+
+- Le panneau de contrôle des services est supprimé de l'interface — utiliser `systemctl` en ligne de commande si besoin
+
+### ⏭️ Note : v0.3.3 skippée
+
+La v0.3.3 prévue (monitoring RDS, stabilité) n'a pas été publiée — son contenu sera traité dans une version ultérieure.
+
+---
+
 ## [0.3.1] - 2026-03-01
 
 ### 🎉 Fonctionnalités majeures
@@ -17,7 +50,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **Multi-auditeurs** : Support de jusqu'à 100 auditeurs simultanés
 - **Reconnexion automatique** : Le stream se reconnecte automatiquement en cas de coupure
 
-#### Système de licences
+#### Système de licences v3
 - **Trois niveaux de licence** :
   - **Lite (gratuit)** : Streaming et VU-mètre uniquement
   - **Full Trial (30 jours)** : Toutes fonctionnalités pendant 30 jours
@@ -132,31 +165,13 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **Port HTTPS** : Icecast écoute sur 8443 (configurable)
 - **Certificats** : Bundle cert+key nécessaire pour Icecast HTTPS
 
-### 🔄 Migration depuis la version précédente (0.2.x)
+### 🔄 Migration depuis v0.2.x
 
 1. Installer Icecast2 : `sudo apt install icecast2 ffmpeg`
 2. Configurer certificats SSL bundle
 3. Modifier monitor.py pour streaming Icecast
 4. Installer requests : `pip install requests`
 5. Redémarrer services
-
----
-
-## [0.3.2] - 2026-03-09
-
-### 🎉 Publication open source
-
-- **Publication GitHub** : Premier dépôt public, licence MIT
-- **Support RTL-SDR Blog V4** : Drivers `rtl-sdr-blog` fork, TCXO 1ppm
-- **Logo station automatique** : Résolution via API [Radio Browser](https://www.radio-browser.info)
-- **Page documentation** : Section À propos intégrée (FM, MPX, RDS, dongles)
-- **Script d'installation automatique** : `install.sh` couvrant toutes les dépendances
-- **RDS RadioText complet** : Affichage du RT uniquement lorsqu'il est complet (pas de fragments partiels)
-
-### 🔧 Corrections
-
-- **RadioText partiel** : Priorité donnée au RT complet ; suppression des fragments incomplets
-- **Nettoyage dépôt** : Exclusion des fichiers sensibles (clés, certificats, BDD licences)
 
 ---
 
@@ -205,6 +220,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+[0.4.0]: https://github.com/LyonelB/fm-monitor/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/LyonelB/fm-monitor/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/LyonelB/fm-monitor/compare/v0.2.0...v0.3.1
 [0.2.0]: https://github.com/LyonelB/fm-monitor/compare/v0.1.0...v0.2.0
