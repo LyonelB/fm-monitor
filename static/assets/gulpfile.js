@@ -57,3 +57,4 @@ gulp.task('minify:css', function() {
 
 // Default Task: Compile SCSS and minify the result
 gulp.task('default', gulp.series('scss', 'minify:css'));
+
