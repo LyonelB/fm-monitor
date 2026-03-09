@@ -17,7 +17,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **Multi-auditeurs** : Support de jusqu'à 100 auditeurs simultanés
 - **Reconnexion automatique** : Le stream se reconnecte automatiquement en cas de coupure
 
-#### Système de licences v3
+#### Système de licences
 - **Trois niveaux de licence** :
   - **Lite (gratuit)** : Streaming et VU-mètre uniquement
   - **Full Trial (30 jours)** : Toutes fonctionnalités pendant 30 jours
@@ -132,13 +132,31 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - **Port HTTPS** : Icecast écoute sur 8443 (configurable)
 - **Certificats** : Bundle cert+key nécessaire pour Icecast HTTPS
 
-### 🔄 Migration depuis v0.2.x
+### 🔄 Migration depuis la version précédente (0.2.x)
 
 1. Installer Icecast2 : `sudo apt install icecast2 ffmpeg`
 2. Configurer certificats SSL bundle
 3. Modifier monitor.py pour streaming Icecast
 4. Installer requests : `pip install requests`
 5. Redémarrer services
+
+---
+
+## [0.3.2] - 2026-03-09
+
+### 🎉 Publication open source
+
+- **Publication GitHub** : Premier dépôt public, licence MIT
+- **Support RTL-SDR Blog V4** : Drivers `rtl-sdr-blog` fork, TCXO 1ppm
+- **Logo station automatique** : Résolution via API [Radio Browser](https://www.radio-browser.info)
+- **Page documentation** : Section À propos intégrée (FM, MPX, RDS, dongles)
+- **Script d'installation automatique** : `install.sh` couvrant toutes les dépendances
+- **RDS RadioText complet** : Affichage du RT uniquement lorsqu'il est complet (pas de fragments partiels)
+
+### 🔧 Corrections
+
+- **RadioText partiel** : Priorité donnée au RT complet ; suppression des fragments incomplets
+- **Nettoyage dépôt** : Exclusion des fichiers sensibles (clés, certificats, BDD licences)
 
 ---
 
@@ -187,6 +205,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+[0.3.2]: https://github.com/LyonelB/fm-monitor/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/LyonelB/fm-monitor/compare/v0.2.0...v0.3.1
 [0.2.0]: https://github.com/LyonelB/fm-monitor/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LyonelB/fm-monitor/releases/tag/v0.1.0
