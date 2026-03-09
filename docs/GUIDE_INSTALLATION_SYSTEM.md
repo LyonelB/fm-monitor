@@ -112,7 +112,7 @@ fm-monitor/
 cd ~/fm-monitor
 git init
 git add .
-git commit -m "Initial commit - FM Monitor v2.0"
+git commit -m "Initial commit - FM Monitor v0.4.0"
 git branch -M main
 git remote add origin https://github.com/LyonelB/fm-monitor.git
 git push -u origin main
@@ -136,8 +136,8 @@ Dans GitHub :
 ### 4. Créer une Release
 
 Releases → Create a new release :
-- Tag : `v2.0.0`
-- Title : `Version 2.0 - Interface moderne + Sécurité renforcée`
+- Tag : `v0.4.0`
+- Title : `Version 0.4.0 - Script installation automatique + historique niveaux audio`
 - Description : Changelog complet
 
 ---
@@ -340,3 +340,4 @@ Si vous voulez tester l'installation :
 3. Vérifiez que tout fonctionne
 
 **Le système d'installation est prêt pour la production !** 🎉
+
