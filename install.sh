@@ -82,7 +82,20 @@ print_step "Mise à jour du système..."
 sudo apt update -qq
 
 # =============================================
-# 3. INSTALLATION DES DÉPENDANCES SYSTÈME
+# 3. PRÉ-CONFIGURATION ICECAST2 (silencieux)
+# =============================================
+print_step "Pré-configuration d'Icecast2 (mode silencieux)..."
+sudo debconf-set-selections <<EOF
+icecast2 icecast2/icecast-setup boolean true
+icecast2 icecast2/hostname string localhost
+icecast2 icecast2/sourcepassword password $ICECAST_PASSWORD
+icecast2 icecast2/relaypassword password $ICECAST_PASSWORD
+icecast2 icecast2/adminpassword password $ICECAST_PASSWORD
+EOF
+print_info "Icecast2 pré-configuré ✓"
+
+# =============================================
+# 4. INSTALLATION DES DÉPENDANCES SYSTÈME
 # =============================================
 print_step "Installation des dépendances système..."
 
@@ -107,12 +120,12 @@ for package in "${PACKAGES[@]}"; do
         print_info "$package déjà installé"
     else
         print_info "Installation de $package..."
-        sudo apt install -y -qq "$package"
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y -qq "$package"
     fi
 done
 
 # =============================================
-# 4. INSTALLATION DE REDSEA (décodeur RDS)
+# 5. INSTALLATION DE REDSEA (décodeur RDS)
 # =============================================
 print_step "Installation de redsea (décodeur RDS)..."
 
@@ -123,7 +136,7 @@ else
     REDSEA_TMP=$(mktemp -d)
     git clone --quiet https://github.com/windytan/redsea.git "$REDSEA_TMP"
     cd "$REDSEA_TMP"
-    meson setup build --quiet
+    meson setup build
     ninja -C build -j$(nproc) 2>/dev/null
     sudo ninja -C build install 2>/dev/null
     cd -
@@ -138,30 +151,37 @@ else
 fi
 
 # =============================================
-# 5. CONFIGURATION ICECAST2
+# 6. CONFIGURATION ICECAST2
 # =============================================
 print_step "Configuration d'Icecast2..."
 
 ICECAST_CONF="/etc/icecast2/icecast.xml"
 if [ -f "$ICECAST_CONF" ]; then
     sudo cp "$ICECAST_CONF" "${ICECAST_CONF}.bak"
+    # Configurer le mot de passe source (remplace valeur vide ou existante)
     sudo python3 -c "
+import re
 with open('$ICECAST_CONF', 'r') as f:
     content = f.read()
-content = content.replace('<source-password></source-password>', '<source-password>$ICECAST_PASSWORD</source-password>')
+content = re.sub(r'<source-password>[^<]*</source-password>', '<source-password>$ICECAST_PASSWORD</source-password>', content)
 with open('$ICECAST_CONF', 'w') as f:
     f.write(content)
 print('  mot de passe source configuré')
 "
     sudo systemctl enable icecast2
     sudo systemctl restart icecast2
-    print_info "Icecast2 configuré et démarré"
+    sleep 2
+    if sudo systemctl is-active --quiet icecast2; then
+        print_info "Icecast2 démarré ✓"
+    else
+        print_warning "Icecast2 ne démarre pas - vérifiez: sudo systemctl status icecast2"
+    fi
 else
     print_warning "icecast.xml non trouvé - configuration manuelle requise"
 fi
 
 # =============================================
-# 6. TÉLÉCHARGEMENT DE FM MONITOR
+# 7. TÉLÉCHARGEMENT DE FM MONITOR
 # =============================================
 print_step "Installation de FM Monitor..."
 
@@ -197,10 +217,13 @@ old = \"with requests.get('https://localhost:8443/fmmonitor', stream=True, verif
 new = \"with requests.get('http://localhost:8000/fmmonitor', stream=True, timeout=5) as r:\"
 if old in c:
     with open('app.py', 'w') as f: f.write(c.replace(old, new))
+    print('  proxy stream corrigé (http:8000)')
+else:
+    print('  proxy stream déjà correct')
 " 2>/dev/null || true
 
 # =============================================
-# 7. ENVIRONNEMENT VIRTUEL PYTHON
+# 8. ENVIRONNEMENT VIRTUEL PYTHON
 # =============================================
 print_step "Création de l'environnement virtuel Python..."
 
@@ -208,7 +231,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # =============================================
-# 8. INSTALLATION DES PACKAGES PYTHON
+# 9. INSTALLATION DES PACKAGES PYTHON
 # =============================================
 print_step "Installation des packages Python..."
 
@@ -232,7 +255,7 @@ done
 deactivate
 
 # =============================================
-# 9. CONFIGURATION INITIALE
+# 10. CONFIGURATION INITIALE
 # =============================================
 print_step "Configuration initiale..."
 
@@ -311,7 +334,7 @@ EOF
 fi
 
 # =============================================
-# 10. GÉNÉRATION DU CERTIFICAT SSL
+# 11. GÉNÉRATION DU CERTIFICAT SSL
 # =============================================
 print_step "Génération du certificat SSL..."
 
@@ -329,7 +352,7 @@ else
 fi
 
 # =============================================
-# 11. SERVICE SYSTEMD
+# 12. SERVICE SYSTEMD
 # =============================================
 print_step "Configuration du service systemd..."
 
@@ -357,7 +380,7 @@ sudo systemctl enable fm-monitor
 print_info "Service systemd configuré"
 
 # =============================================
-# 12. PERMISSIONS RTL-SDR
+# 13. PERMISSIONS RTL-SDR
 # =============================================
 print_step "Configuration des permissions RTL-SDR..."
 
@@ -376,7 +399,7 @@ sudo udevadm trigger
 sudo usermod -a -G plugdev "$USER"
 
 # =============================================
-# 13. VÉRIFICATION
+# 14. VÉRIFICATION
 # =============================================
 print_step "Vérification de l'installation..."
 
@@ -409,7 +432,7 @@ if [ $missing_files -eq 0 ]; then
 fi
 
 # =============================================
-# 14. FINALISATION
+# 15. FINALISATION
 # =============================================
 echo ""
 echo -e "${GREEN}=========================================="
