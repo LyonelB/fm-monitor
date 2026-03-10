@@ -234,7 +234,10 @@
 
       <!-- RDS -->
       <div class="mb-6 rounded bg-white p-6 shadow">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">RDS (Radio Data System)</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          RDS (Radio Data System)
+          <span id="rds-status-dot" class="inline-block w-3 h-3 rounded-full bg-gray-300" title="RDS non reçu"></span>
+        </h3>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -412,6 +415,19 @@
                 document.getElementById('rds-pi-display').textContent = stats.pi;
             }
 
+            // Voyant RDS
+            const rdsDot = document.getElementById('rds-status-dot');
+            if (!stats.rds_ever_received) {
+                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-gray-300';
+                rdsDot.title = 'RDS non reçu';
+            } else if (stats.rds_ok) {
+                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-green-500';
+                rdsDot.title = 'RDS OK';
+            } else {
+                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-red-500';
+                rdsDot.title = 'RDS absent';
+            }
+
             // Logo station (indépendant du service RDS)
             const logoImg = document.getElementById('station-logo');
             const logoContainer = document.getElementById('station-logo-container');
@@ -567,6 +583,19 @@
                     }
                     if (stats.rt && stats.rt !== '-') {
                         document.getElementById('rds-rt-display').textContent = stats.rt;
+                    }
+
+                    // Voyant RDS
+                    const rdsDotSSE = document.getElementById('rds-status-dot');
+                    if (!stats.rds_ever_received) {
+                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-gray-300';
+                        rdsDotSSE.title = 'RDS non reçu';
+                    } else if (stats.rds_ok) {
+                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-green-500';
+                        rdsDotSSE.title = 'RDS OK';
+                    } else {
+                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-red-500';
+                        rdsDotSSE.title = 'RDS absent';
                     }
 
             } catch(e) {
