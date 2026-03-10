@@ -10,6 +10,7 @@ import json
 import logging
 import time
 import os
+import collections
 import numpy as np
 import requests
 from datetime import datetime
@@ -39,6 +40,22 @@ class FMMonitor:
         self.signal_ok = True
         self.silence_start_time = None
         self.alert_sent = False
+
+        # Surveillance de la modulation
+        self.level_history = collections.deque(maxlen=30)
+        self.modulation_ok = True
+        self.modulation_alert_sent = False
+        self.no_modulation_start = None
+        self.modulation_std_threshold = float(self.audio_config.get('modulation_std_threshold', 1.5))
+        self.modulation_alert_delay = int(self.audio_config.get('modulation_alert_delay', 30))
+        self.signal_lost_threshold = float(self.audio_config.get('signal_lost_threshold', -50.0))
+
+        # Surveillance RDS
+        self.rds_ok = False
+        self.rds_ever_received = False
+        self.rds_last_seen = None
+        self.rds_alert_sent = False
+        self.rds_timeout = int(self.audio_config.get('rds_timeout', 120))
 
         # Système d'alertes
         self.email_alert = EmailAlert(config_path)
@@ -378,12 +395,18 @@ class FMMonitor:
                     with self.stats_lock:
                         if 'ps' in data:
                             self.stats['ps'] = data['ps'].strip()
+                            self.rds_last_seen = time.time()
+                            self.rds_ever_received = True
+                            self.rds_ok = True
                             if not self._logo_searched:
                                 import threading as _t
                                 _t.Thread(target=self._fetch_station_logo, daemon=True).start()
 
                         if 'pi' in data:
                             self.stats['pi'] = data['pi']
+                            self.rds_last_seen = time.time()
+                            self.rds_ever_received = True
+                            self.rds_ok = True
 
                         if 'radiotext' in data:
                             rt_full = data['radiotext'].strip()
@@ -479,7 +502,7 @@ class FMMonitor:
             return False
 
     def _monitor_signal(self):
-        """Surveille le niveau du signal et envoie des alertes"""
+        """Surveille le niveau du signal et la modulation audio"""
         logger.info("Thread de surveillance démarré")
 
         while self.running:
@@ -487,55 +510,145 @@ class FMMonitor:
                 with self.stats_lock:
                     current_level = self.stats['current_level']
 
-                threshold = self.audio_config['silence_threshold']
+                # Alimenter le buffer d'historique
+                self.level_history.append(current_level)
 
-                if current_level < threshold:
+                # ── 1. PERTE TOTALE DE L'ÉMETTEUR (porteuse absente) ──────────
+                # Seuil très bas : -50 dB par défaut → vrai crash émetteur
+                if current_level < self.signal_lost_threshold:
                     if self.signal_ok:
                         self.signal_ok = False
                         self.silence_start_time = time.time()
-                        logger.warning(f"Signal faible détecté: {current_level:.2f} dB")
+                        logger.warning(f"Perte émetteur détectée: {current_level:.2f} dB")
                     else:
                         silence_duration = time.time() - self.silence_start_time
-
                         if silence_duration >= self.audio_config['silence_duration'] and not self.alert_sent:
-                            logger.error(f"Signal perdu depuis {silence_duration:.0f}s - ENVOI ALERTE")
-
+                            logger.error(f"Émetteur perdu depuis {silence_duration:.0f}s - ENVOI ALERTE")
                             success = self.email_alert.send_alert(
-                                alert_type="Signal FM perdu",
-                                details=f"Niveau: {current_level:.2f} dB, Durée: {int(silence_duration)}s"
+                                alert_type="Émetteur FM hors ligne",
+                                details=f"Aucune porteuse FM détectée.\nNiveau: {current_level:.2f} dB\nDurée: {int(silence_duration)}s",
+                                skip_cooldown=True
                             )
-
                             if success:
                                 self.alert_sent = True
                                 with self.stats_lock:
                                     self.stats['alerts_sent'] += 1
                                     self.stats['last_alert'] = datetime.now().isoformat()
-
                                 self.db.save_alert(
                                     alert_type='signal_lost',
                                     level_db=current_level,
                                     duration_seconds=int(silence_duration),
-                                    message=f"Signal perdu - {current_level:.2f} dB",
+                                    message=f"Émetteur hors ligne - {current_level:.2f} dB",
                                     email_sent=True
                                 )
                 else:
                     if not self.signal_ok:
-                        logger.info(f"Signal rétabli: {current_level:.2f} dB")
+                        logger.info(f"Émetteur rétabli: {current_level:.2f} dB")
                         if self.alert_sent:
                             self.email_alert.send_recovery_alert()
                             self.db.save_alert(
                                 alert_type='signal_restored',
                                 level_db=current_level,
                                 duration_seconds=int(time.time() - self.silence_start_time),
-                                message=f"Signal rétabli - {current_level:.2f} dB",
+                                message=f"Émetteur rétabli - {current_level:.2f} dB",
                                 email_sent=True
                             )
-
                     self.signal_ok = True
                     self.silence_start_time = None
                     self.alert_sent = False
 
-                # Mettre à jour uptime
+                # ── 2. ABSENCE DE MODULATION (console coupée, porteuse présente) ──
+                if len(self.level_history) >= 20:
+                    std = float(np.std(list(self.level_history)))
+                    no_modulation = std < self.modulation_std_threshold
+
+                    if no_modulation:
+                        if self.no_modulation_start is None:
+                            self.no_modulation_start = time.time()
+                        absence_duration = time.time() - self.no_modulation_start
+
+                        if absence_duration >= self.modulation_alert_delay and not self.modulation_alert_sent:
+                            logger.warning(f"Absence modulation ({std:.2f} dB std, {absence_duration:.0f}s) - ENVOI ALERTE")
+                            success = self.email_alert.send_alert(
+                                alert_type="Absence de modulation audio",
+                                details=f"Signal FM présent ({current_level:.1f} dB) mais sans modulation audio depuis {int(absence_duration)}s.\n"
+                                        f"Variation du niveau : ±{std:.2f} dB (seuil : ±{self.modulation_std_threshold} dB)\n"
+                                        f"Vérifier la console du studio et la chaîne audio.",
+                                skip_cooldown=True
+                            )
+                            if success:
+                                self.modulation_alert_sent = True
+                                self.modulation_ok = False
+                                with self.stats_lock:
+                                    self.stats['alerts_sent'] += 1
+                                    self.stats['last_alert'] = datetime.now().isoformat()
+                                self.db.save_alert(
+                                    alert_type='no_modulation',
+                                    level_db=current_level,
+                                    duration_seconds=int(absence_duration),
+                                    message=f"Absence modulation - std {std:.2f} dB",
+                                    email_sent=True
+                                )
+                    else:
+                        if self.modulation_alert_sent:
+                            logger.info(f"Modulation rétablie (std={std:.2f} dB)")
+                            self.email_alert.send_alert(
+                                alert_type="Modulation audio rétablie",
+                                details=f"La modulation audio est à nouveau détectée.\nVariation du niveau : ±{std:.2f} dB",
+                                skip_cooldown=True
+                            )
+                            self.db.save_alert(
+                                alert_type='modulation_restored',
+                                level_db=current_level,
+                                duration_seconds=0,
+                                message=f"Modulation rétablie - std {std:.2f} dB",
+                                email_sent=True
+                            )
+                        self.modulation_ok = True
+                        self.modulation_alert_sent = False
+                        self.no_modulation_start = None
+
+                # ── 3. SURVEILLANCE RDS ────────────────────────────────────────
+                if self.rds_enabled and self.rds_ever_received:
+                    rds_absence = time.time() - self.rds_last_seen if self.rds_last_seen else 0
+                    if rds_absence >= self.rds_timeout:
+                        if not self.rds_alert_sent:
+                            self.rds_ok = False
+                            logger.warning(f"RDS absent depuis {rds_absence:.0f}s - ENVOI ALERTE")
+                            success = self.email_alert.send_alert(
+                                alert_type="Signal RDS absent",
+                                details=f"Aucune donnée RDS reçue depuis {int(rds_absence)}s.\n"
+                                        f"Vérifier le codeur RDS de la station.",
+                                skip_cooldown=True
+                            )
+                            if success:
+                                self.rds_alert_sent = True
+                                self.db.save_alert(
+                                    alert_type='rds_lost',
+                                    level_db=current_level,
+                                    duration_seconds=int(rds_absence),
+                                    message=f"RDS absent depuis {int(rds_absence)}s",
+                                    email_sent=True
+                                )
+                    else:
+                        if self.rds_alert_sent:
+                            logger.info("Signal RDS rétabli")
+                            self.email_alert.send_alert(
+                                alert_type="Signal RDS rétabli",
+                                details="Les données RDS sont à nouveau reçues correctement.",
+                                skip_cooldown=True
+                            )
+                            self.db.save_alert(
+                                alert_type='rds_restored',
+                                level_db=current_level,
+                                duration_seconds=0,
+                                message="RDS rétabli",
+                                email_sent=True
+                            )
+                        self.rds_ok = True
+                        self.rds_alert_sent = False
+
+                # ── Mettre à jour uptime ──────────────────────────────────────
                 if self.stats['start_time']:
                     uptime = (datetime.now() - self.stats['start_time']).total_seconds()
                     with self.stats_lock:
@@ -614,6 +727,9 @@ class FMMonitor:
             stats = self.stats.copy()
 
         stats['signal_ok'] = self.signal_ok
+        stats['modulation_ok'] = self.modulation_ok
+        stats['rds_ok'] = self.rds_ok
+        stats['rds_ever_received'] = self.rds_ever_received
         stats['frequency'] = self.rtl_config['frequency']
         stats['station_logo'] = self.stats.get('station_logo')
 
@@ -626,6 +742,13 @@ class FMMonitor:
         """Arrête le moniteur"""
         logger.info("Arrêt du moniteur FM")
         self.running = False
+        self.level_history.clear()
+        self.modulation_ok = True
+        self.modulation_alert_sent = False
+        self.no_modulation_start = None
+        self.rds_ok = False
+        self.rds_ever_received = False
+        self.rds_alert_sent = False
         self._logo_searched = False
         self._logo_last_attempt = 0
         self._logo_fail_count = 0

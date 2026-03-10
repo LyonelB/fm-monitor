@@ -233,13 +233,31 @@ def save_config():
                 config['audio']['silence_threshold'] = float(data['audio']['silence_threshold'])
             if 'silence_duration' in data['audio']:
                 config['audio']['silence_duration'] = int(data['audio']['silence_duration'])
+            if 'modulation_alert_delay' in data['audio']:
+                config['audio']['modulation_alert_delay'] = int(data['audio']['modulation_alert_delay'])
+                if monitor:
+                    monitor.modulation_alert_delay = int(data['audio']['modulation_alert_delay'])
+            if 'modulation_std_threshold' in data['audio']:
+                config['audio']['modulation_std_threshold'] = float(data['audio']['modulation_std_threshold'])
+                if monitor:
+                    monitor.modulation_std_threshold = float(data['audio']['modulation_std_threshold'])
+            if 'signal_lost_threshold' in data['audio']:
+                config['audio']['signal_lost_threshold'] = float(data['audio']['signal_lost_threshold'])
+                if monitor:
+                    monitor.signal_lost_threshold = float(data['audio']['signal_lost_threshold'])
+            if 'rds_timeout' in data['audio']:
+                config['audio']['rds_timeout'] = int(data['audio']['rds_timeout'])
+                if monitor:
+                    monitor.rds_timeout = int(data['audio']['rds_timeout'])
 
         # Configuration email
         if 'email' in data:
             if 'sender_email' in data['email']:
                 config['email']['sender_email'] = data['email']['sender_email']
             if 'sender_password' in data['email']:
-                config['email']['sender_password'] = data['email']['sender_password']
+                pwd = data['email']['sender_password']
+                if pwd and pwd.strip() and pwd.strip() != '********':
+                    config['email']['sender_password'] = pwd.strip()
             if 'recipient_emails' in data['email']:
                 emails = data['email']['recipient_emails']
                 if isinstance(emails, str):

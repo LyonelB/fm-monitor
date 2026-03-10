@@ -5,6 +5,43 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.4.1] - 2026-03-10
+
+### 🔔 Surveillance avancée
+
+#### Détection d'absence de modulation
+- **Surveillance par écart-type** : détection de l'absence de modulation audio même quand l'émetteur reste actif (porteuse sans programme)
+- **Alerte email** : envoi automatique après un délai configurable (défaut : 30s)
+- **Alerte de rétablissement** : email envoyé dès le retour de la modulation
+
+#### Surveillance de la présence RDS
+- **Détection de perte RDS** : alerte si aucune donnée RDS reçue depuis un délai configurable (défaut : 120s)
+- **Alerte de rétablissement** RDS
+- **Voyant RDS** sur le dashboard : 🔘 jamais reçu / 🟢 actif / 🔴 absent
+
+### ⚙️ Configuration étendue
+
+Tous les seuils sont modifiables depuis l'interface web sans redémarrer le service :
+
+- **Seuil de modulation** (dB std) — sensibilité de détection
+- **Délai avant alerte modulation** (secondes)
+- **Seuil perte émetteur** (dBFS)
+- **Délai avant alerte émetteur** (secondes)
+- **Délai avant alerte RDS absent** (secondes)
+
+### 📊 Page Statistiques
+
+- **Colonne Type** : badges colorés distincts — 🔴 Perte émetteur / 🟠 Absence modulation / 🟣 RDS absent
+- **Groupement multi-types** : paires perte/rétablissement correctement regroupées pour les 3 types d'alertes
+
+### 🔧 Technique
+
+- `monitor.py` : surveillance modulation par buffer glissant 30s + état RDS ; `rds_timeout` lu depuis la config
+- `database.py` : `get_alerts_history_grouped` refactorisé pour tous les types de paires
+- `app.py` : sauvegarde et application à chaud de `modulation_alert_delay`, `modulation_std_threshold`, `signal_lost_threshold`, `rds_timeout`
+
+---
+
 ## [0.4.0] - 2026-03-09
 
 ### 🎉 Fonctionnalités
@@ -220,6 +257,7 @@ La v0.3.3 prévue (monitoring RDS, stabilité) n'a pas été publiée — son co
 
 ---
 
+[0.4.1]: https://github.com/LyonelB/fm-monitor/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/LyonelB/fm-monitor/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/LyonelB/fm-monitor/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/LyonelB/fm-monitor/compare/v0.2.0...v0.3.1
