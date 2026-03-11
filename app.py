@@ -516,6 +516,106 @@ def proxy_stream():
         }
     )
 
+# =============================================
+# ENREGISTREMENT AUDIO
+# =============================================
+
+record_process = None
+record_filepath = None
+RECORD_MAX_BYTES = 50 * 1024 * 1024  # 50 Mo
+RECORD_DIR = '/tmp'
+
+@app.route('/api/record/start', methods=['POST'])
+@auth.login_required
+def record_start():
+    global record_process, record_filepath
+    if record_process and record_process.poll() is None:
+        return jsonify({'status': 'error', 'message': 'Enregistrement déjà en cours'}), 400
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    record_filepath = os.path.join(RECORD_DIR, f'fm-monitor_{timestamp}.mp3')
+
+    try:
+        record_process = subprocess.Popen([
+            'ffmpeg', '-y',
+            '-i', 'http://localhost:8000/fmmonitor',
+            '-c', 'copy',
+            '-fs', str(RECORD_MAX_BYTES),
+            record_filepath
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return jsonify({'status': 'ok', 'message': 'Enregistrement démarré'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/record/stop', methods=['POST'])
+@auth.login_required
+def record_stop():
+    global record_process, record_filepath
+    if not record_process or record_process.poll() is not None:
+        return jsonify({'status': 'error', 'message': 'Aucun enregistrement en cours'}), 400
+
+    record_process.terminate()
+    try:
+        record_process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        record_process.kill()
+
+    record_process = None
+
+    if record_filepath and os.path.exists(record_filepath):
+        size = os.path.getsize(record_filepath)
+        return jsonify({'status': 'ok', 'filepath': record_filepath, 'size': size})
+    else:
+        return jsonify({'status': 'error', 'message': 'Fichier introuvable'}), 500
+
+@app.route('/api/record/download')
+@auth.login_required
+def record_download():
+    global record_filepath
+    if not record_filepath or not os.path.exists(record_filepath):
+        return jsonify({'status': 'error', 'message': 'Aucun fichier à télécharger'}), 404
+
+    filepath = record_filepath
+    filename = os.path.basename(filepath)
+    record_filepath = None
+
+    from flask import send_file
+    import threading
+
+    def delete_after_send(path):
+        import time
+        time.sleep(5)
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+
+    threading.Thread(target=delete_after_send, args=(filepath,), daemon=True).start()
+
+    return send_file(filepath, mimetype='audio/mpeg',
+                     as_attachment=True, download_name=filename)
+
+@app.route('/api/record/status')
+@auth.login_required
+def record_status():
+    global record_process, record_filepath
+    recording = record_process is not None and record_process.poll() is None
+    size = 0
+    if record_filepath and os.path.exists(record_filepath):
+        size = os.path.getsize(record_filepath)
+    # Arrêt automatique si 50 Mo atteints
+    if recording and size >= RECORD_MAX_BYTES:
+        record_process.terminate()
+        try:
+            record_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            record_process.kill()
+        record_process = None
+        recording = False
+    return jsonify({'recording': recording, 'size': size, 'max': RECORD_MAX_BYTES})
+
+
 if __name__ == '__main__':
     try:
         monitor = FMMonitor('config.json')

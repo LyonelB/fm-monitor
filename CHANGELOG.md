@@ -5,6 +5,26 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.4.2] - 2026-03-11
+
+### 🎉 Fonctionnalités
+
+#### Enregistrement audio à la demande
+- **Bouton REC** dans le player — même style que le bouton Play, positionné à sa gauche
+- **Démarrage / arrêt** : clic pour enregistrer, reclic pour stopper et télécharger automatiquement le fichier MP3
+- **Nommage automatique** : `fm-monitor_YYYYMMDD_HHMMSS.mp3`
+- **Limite 50 Mo** : arrêt automatique à 50 Mo (~52 min à 128 kbps), téléchargement déclenché automatiquement
+- **Barre de progression** : chrono `MM:SS`, taille en Mo et barre rouge pendant l'enregistrement
+- **Nettoyage automatique** : le fichier est supprimé du Pi 5 secondes après le téléchargement
+- Nouvelles routes API : `POST /api/record/start`, `POST /api/record/stop`, `GET /api/record/download`, `GET /api/record/status`
+
+### 🔧 Corrections
+
+- **Voyant modulation** : connecté à `modulation_ok` (était statique) — affiche Active / Absente / — selon l'état réel
+- **Player** : lien "Player externe" déplacé sur la même ligne que le contrôle du volume
+
+---
+
 ## [0.4.1] - 2026-03-10
 
 ### 🔔 Surveillance avancée
@@ -257,6 +277,7 @@ La v0.3.3 prévue (monitoring RDS, stabilité) n'a pas été publiée — son co
 
 ---
 
+[0.4.2]: https://github.com/LyonelB/fm-monitor/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/LyonelB/fm-monitor/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/LyonelB/fm-monitor/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/LyonelB/fm-monitor/compare/v0.3.1...v0.3.2
