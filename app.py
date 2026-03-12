@@ -640,16 +640,18 @@ def record_status():
     return jsonify({'recording': recording, 'size': size, 'max': RECORD_MAX_BYTES})
 
 
+# Démarrage du monitor (exécuté aussi bien par Gunicorn que par python app.py)
+try:
+    cleanup_orphan_records()
+    start_cleanup_scheduler()
+    monitor = FMMonitor('config.json')
+    monitor.start()
+except Exception as e:
+    logger.error(f"Erreur démarrage monitor: {e}")
+
+
 if __name__ == '__main__':
     try:
-        # Nettoyage des fichiers d'enregistrement orphelins au démarrage
-        cleanup_orphan_records()
-        # Lancer le scheduler de nettoyage périodique
-        start_cleanup_scheduler()
-
-        monitor = FMMonitor('config.json')
-        monitor.start()
-
         # Détection automatique du SSL
         ssl_context = None
         cert_file = 'cert.pem'
