@@ -128,7 +128,7 @@ Système de surveillance FM - RTL-SDR
                     server.starttls()
 
                 server.login(self.config['sender_email'], self.config['sender_password'])
-                server.send_message(msg)
+                server.sendmail(self.config['sender_email'], self.config['recipient_emails'], msg.as_string())
 
             self.last_alert_time = datetime.now()
             logger.info(f"Alerte email envoyée: {alert_type}")
@@ -204,7 +204,7 @@ Système de surveillance FM - RTL-SDR
                     server.starttls()
 
                 server.login(self.config['sender_email'], self.config['sender_password'])
-                server.send_message(msg)
+                server.sendmail(self.config['sender_email'], self.config['recipient_emails'], msg.as_string())
 
             logger.info("Alerte de rétablissement envoyée")
             return True
