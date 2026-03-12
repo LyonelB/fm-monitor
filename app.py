@@ -524,6 +524,30 @@ record_process = None
 record_filepath = None
 RECORD_MAX_BYTES = 50 * 1024 * 1024  # 50 Mo
 RECORD_DIR = '/tmp'
+RECORD_MAX_AGE = 30 * 60  # 30 minutes
+
+def cleanup_orphan_records():
+    """Supprime les fichiers d'enregistrement orphelins dans /tmp"""
+    import glob, time
+    pattern = os.path.join(RECORD_DIR, 'fm-monitor_*.mp3')
+    for f in glob.glob(pattern):
+        try:
+            age = time.time() - os.path.getmtime(f)
+            if age > RECORD_MAX_AGE:
+                os.remove(f)
+                logger.info(f"Fichier orphelin supprimé: {f}")
+        except Exception as e:
+            logger.warning(f"Impossible de supprimer {f}: {e}")
+
+def start_cleanup_scheduler():
+    """Lance un thread de nettoyage toutes les 10 minutes"""
+    import threading, time
+    def _loop():
+        while True:
+            time.sleep(600)  # 10 minutes
+            cleanup_orphan_records()
+    t = threading.Thread(target=_loop, daemon=True)
+    t.start()
 
 @app.route('/api/record/start', methods=['POST'])
 @auth.login_required
@@ -618,6 +642,11 @@ def record_status():
 
 if __name__ == '__main__':
     try:
+        # Nettoyage des fichiers d'enregistrement orphelins au démarrage
+        cleanup_orphan_records()
+        # Lancer le scheduler de nettoyage périodique
+        start_cleanup_scheduler()
+
         monitor = FMMonitor('config.json')
         monitor.start()
 

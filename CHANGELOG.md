@@ -5,6 +5,21 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.4.3] - 2026-03-12
+
+### 🔧 Corrections
+
+- **Durée des alertes** : calculée depuis les timestamps réels (début → fin) au lieu du champ `duration_seconds` en base — les durées affichées en page Statistiques sont maintenant exactes
+- **Enregistrement audio** : reprise correcte de l'affichage (chrono + barre) au retour sur l'onglet après mise en arrière-plan du navigateur (`visibilitychange`)
+- **Fichiers orphelins** : nettoyage automatique des enregistrements non téléchargés au démarrage du service et toutes les 10 minutes (suppression après 30 min)
+
+### 🛠️ Infrastructure
+
+- **Serveur WSGI** : migration du serveur de développement Flask vers **Gunicorn** (1 worker, 4 threads) — suppression de l'avertissement de production dans les logs
+- **`requirements.txt`** : ajout de `gunicorn==25.1.0`
+
+---
+
 ## [0.4.2] - 2026-03-11
 
 ### 🎉 Fonctionnalités
@@ -277,6 +292,7 @@ La v0.3.3 prévue (monitoring RDS, stabilité) n'a pas été publiée — son co
 
 ---
 
+[0.4.3]: https://github.com/LyonelB/fm-monitor/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/LyonelB/fm-monitor/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/LyonelB/fm-monitor/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/LyonelB/fm-monitor/compare/v0.3.2...v0.4.0

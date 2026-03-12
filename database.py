@@ -215,7 +215,7 @@ class FMDatabase:
                             'alert_label': label,
                             'start_time': lost_alert['timestamp'],
                             'end_time': alert['timestamp'],
-                            'duration': alert['duration_seconds'] or lost_alert['duration_seconds'] or 0,
+                            'duration': int((datetime.fromisoformat(alert['timestamp']) - datetime.fromisoformat(lost_alert['timestamp'])).total_seconds()),
                             'level_lost': lost_alert['level_db'],
                             'level_restored': alert['level_db'],
                             'emails_sent': (1 if lost_alert['email_sent'] else 0) + (1 if alert['email_sent'] else 0),
