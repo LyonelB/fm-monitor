@@ -428,6 +428,7 @@ def get_alerts_history():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/alerts/history/grouped')
+@limiter.exempt
 @auth.login_required
 def get_alerts_history_grouped():
     """Récupère l'historique des alertes groupées par paires"""
