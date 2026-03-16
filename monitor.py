@@ -16,6 +16,7 @@ import requests
 from datetime import datetime
 from email_alert import EmailAlert
 from database import FMDatabase
+from mpx_analyzer import MPXAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,20 @@ class FMMonitor:
         self.watchdog_enabled = False       # Watchdog auto-relance rtl_fm
         self.rds_enabled = True           # Lecteur RDS automatique (désactivé par défaut)
         self.history_enabled = False        # Enregistrement historique audio 24h
+        self.mpx_enabled = True            # Analyse MPX (déviation, pilote, stéréo, RDS RF)
+
+        # Analyseur MPX (process_every=4 → mise à jour ~48ms, adapté Pi 3B+)
+        self.mpx_analyzer = MPXAnalyzer(sample_rate=171000, process_every=4)
+
+        # Alerte sur-déviation
+        self.deviation_alert_threshold = float(
+            self.audio_config.get('deviation_alert_threshold', 80.0)
+        )  # kHz — alerte si déviation peak > seuil
+        self.deviation_alert_sent = False
+        self.deviation_over_start = None
+        self.deviation_alert_delay = int(
+            self.audio_config.get('deviation_alert_delay', 10)
+        )  # secondes de sur-déviation avant alerte
 
         # Queue pour sauvegarde BDD non-bloquante
         self.db_queue = queue.Queue(maxsize=100)
@@ -111,6 +126,7 @@ class FMMonitor:
             'watchdog': self.watchdog_enabled,
             'rds': self.rds_enabled,
             'history': self.history_enabled,
+            'mpx': self.mpx_enabled,
             'monitoring': self.running
         }
 
@@ -149,6 +165,12 @@ class FMMonitor:
         elif service == 'history':
             self.history_enabled = enabled
             logger.info(f"Historique audio {'activé' if enabled else 'désactivé'}")
+
+        elif service == 'mpx':
+            self.mpx_enabled = enabled
+            if not enabled:
+                self.mpx_analyzer.reset()
+            logger.info(f"Analyse MPX {'activée' if enabled else 'désactivée'}")
 
         else:
             logger.warning(f"Service inconnu: {service}")
@@ -322,6 +344,10 @@ class FMMonitor:
                     with self.stats_lock:
                         self.stats['current_level'] = float(db)
                         self.stats['modulation_active'] = modulation_active
+
+                    # ── Analyse MPX (déviation, pilote, stéréo, RDS RF) ──
+                    if self.mpx_enabled:
+                        self.mpx_analyzer.process_chunk(samples)
 
                     # Envoyer en BDD via queue non-bloquante toutes les 5 secondes
                     if self.history_enabled and time.time() - self.last_db_save >= 5:
@@ -648,6 +674,52 @@ class FMMonitor:
                         self.rds_ok = True
                         self.rds_alert_sent = False
 
+                # ── 4. SURVEILLANCE SUR-DÉVIATION FM ─────────────────────────
+                if self.mpx_enabled:
+                    mpx = self.mpx_analyzer.get_results()
+                    deviation = mpx.get('deviation_peak', 0.0)
+
+                    if deviation > self.deviation_alert_threshold:
+                        if self.deviation_over_start is None:
+                            self.deviation_over_start = time.time()
+                        over_duration = time.time() - self.deviation_over_start
+
+                        if over_duration >= self.deviation_alert_delay and not self.deviation_alert_sent:
+                            logger.warning(
+                                f"Sur-déviation FM : {deviation:.1f} kHz > "
+                                f"{self.deviation_alert_threshold:.0f} kHz depuis {over_duration:.0f}s"
+                            )
+                            success = self.email_alert.send_alert(
+                                alert_type="Sur-déviation FM détectée",
+                                details=(
+                                    f"Déviation FM : {deviation:.1f} kHz "
+                                    f"(seuil : {self.deviation_alert_threshold:.0f} kHz)\n"
+                                    f"Durée : {int(over_duration)}s\n"
+                                    f"Pilote 19 kHz : {mpx.get('pilot_level', -100):.1f} dBFS\n"
+                                    f"Vérifier le processeur audio et le limiter de déviation."
+                                ),
+                                skip_cooldown=True
+                            )
+                            if success:
+                                self.deviation_alert_sent = True
+                                self.db.save_alert(
+                                    alert_type='over_deviation',
+                                    level_db=current_level,
+                                    duration_seconds=int(over_duration),
+                                    message=f"Sur-déviation {deviation:.1f} kHz",
+                                    email_sent=True
+                                )
+                    else:
+                        if self.deviation_alert_sent:
+                            logger.info(f"Déviation revenue dans les limites : {deviation:.1f} kHz")
+                            self.email_alert.send_alert(
+                                alert_type="Déviation FM normalisée",
+                                details=f"Déviation revenue à {deviation:.1f} kHz.",
+                                skip_cooldown=True
+                            )
+                        self.deviation_alert_sent = False
+                        self.deviation_over_start = None
+
                 # ── Mettre à jour uptime ──────────────────────────────────────
                 if self.stats['start_time']:
                     uptime = (datetime.now() - self.stats['start_time']).total_seconds()
@@ -733,6 +805,10 @@ class FMMonitor:
         stats['frequency'] = self.rtl_config['frequency']
         stats['station_logo'] = self.stats.get('station_logo')
 
+        # Données MPX (déviation, pilote, stéréo, RDS RF)
+        if self.mpx_enabled:
+            stats.update(self.mpx_analyzer.get_results())
+
         if stats['start_time']:
             stats['start_time'] = stats['start_time'].strftime('%d/%m/%Y %H:%M:%S')
 
@@ -753,6 +829,9 @@ class FMMonitor:
         self._logo_last_attempt = 0
         self._logo_fail_count = 0
         self.stats['station_logo'] = None
+        self.deviation_alert_sent = False
+        self.deviation_over_start = None
+        self.mpx_analyzer.reset()
 
         if self.master_process:
             self.master_process.kill()
