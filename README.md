@@ -1,6 +1,6 @@
 # 📻 FM Monitor
 
-![Version](https://img.shields.io/badge/version-0.4.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20%7C%20Linux-lightgrey.svg)
@@ -13,9 +13,19 @@
 
 ### 📡 Réception & Analyse
 - **Réception FM** via dongle RTL-SDR (V3, V4, compatibles RTL2832U)
-- **VU-mètre temps réel** avec historique audio 24h
+- **VU-mètre temps réel** avec historique audio 30 secondes
 - **Détection de silence / perte de signal** configurable
-- **Mesure de modulation** FM
+- **Détection d'absence de modulation** (porteuse sans programme)
+
+### 📊 Analyse MPX temps réel
+- **Déviation FM peak + RMS** (kHz) — jauge colorée avec seuils configurables
+- **Niveaux L/R séparés** — décodage stéréo DSB-SC depuis le signal MPX
+- **Ton pilote 19 kHz** — détection et niveau
+- **Signal stéréo 38 kHz** — niveau de la sous-porteuse L−R
+- **Sous-porteuse RDS 57 kHz** — niveau RF indépendant du décodage
+- **Puissance MPX totale** (dBFS)
+- **SNR** — rapport signal/bruit (plancher mesuré en 60–75 kHz)
+- **Alerte sur-déviation** — email automatique si déviation > seuil
 
 ### 📻 Décodage RDS
 - **PS** (Programme Service) — nom de la station (8 car.)
@@ -209,6 +219,7 @@ https://[IP-de-votre-appareil]:5000
 fm-monitor/
 ├── app.py              # Application Flask (routes, API)
 ├── monitor.py          # Moteur de monitoring RTL-SDR / RDS
+├── mpx_analyzer.py     # Analyse MPX temps réel (déviation, L/R, SNR...)
 ├── email_alert.py      # Alertes email
 ├── auth.py             # Authentification
 ├── database.py         # Base SQLite (historique, alertes)
@@ -219,7 +230,7 @@ fm-monitor/
 │   ├── index.html      # Dashboard principal
 │   ├── config.html     # Page configuration
 │   ├── stats.html      # Statistiques
-│   ├── about.html      # Documentation FM/RDS
+│   ├── about.html      # Documentation FM/MPX/RDS
 │   └── login.html      # Authentification
 └── static/             # Assets CSS/JS
 ```
@@ -230,6 +241,7 @@ fm-monitor/
 
 La page **À propos** intégrée dans l'interface explique :
 - Le fonctionnement de la diffusion FM et du signal MPX
+- Le spectre MPX : déviation, pilote 19 kHz, stéréo 38 kHz, RDS 57 kHz, puissance, SNR
 - Le système RDS (PS, RT, PI Code)
 - Radio Browser et la résolution de logo
 - Les dongles compatibles et leur installation
@@ -280,6 +292,7 @@ tail -f /tmp/rds_output.json
 - [x] v0.4.1 — Surveillance modulation + RDS, alertes multi-types, configuration étendue
 - [x] v0.4.2 — Enregistrement audio à la demande, voyant modulation, player amélioré
 - [x] v0.4.3 — Corrections durée alertes, Gunicorn, robustesse enregistrement
+- [x] v0.5.0 — Analyse MPX temps réel (déviation, L/R, pilote, stéréo, RDS RF, SNR), dashboard no-scroll
 - [ ] v0.5.x — Support TEF6686 (Headless TEF Lite) — démodulation stéréo hardware, RDS natif
 
 ---

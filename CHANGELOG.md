@@ -5,6 +5,52 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.5.0] - 2026-03-16
+
+### 🎉 Fonctionnalités
+
+#### Analyse MPX temps réel
+- **Nouveau module `mpx_analyzer.py`** : analyse complète du signal multiplex FM en temps réel, optimisé Raspberry Pi 3B+
+- **Déviation FM peak + RMS** : mesure de la déviation instantanée en kHz avec jauge colorée (vert < 60 kHz / jaune < 70 kHz / rouge > 70 kHz)
+- **Ton pilote 19 kHz** : détection et niveau de la sous-porteuse pilote stéréo
+- **Signal stéréo L−R (38 kHz)** : décodage DSB-SC complet — reconstruction des canaux gauche et droit séparés
+- **Niveaux L/R indépendants** : niveaux audio Left et Right affichés séparément en dBFS
+- **Sous-porteuse RDS (57 kHz)** : niveau RF du canal RDS indépendamment du décodage RDS
+- **Puissance MPX totale** : niveau RMS global du signal multiplex en dBFS
+- **SNR** : rapport signal/bruit mesuré (signal audio 100 Hz–15 kHz vs plancher de bruit 60–75 kHz)
+- **Alerte sur-déviation** : email automatique si la déviation FM dépasse le seuil configurable (défaut : 80 kHz)
+
+#### Dashboard redesigné — no-scroll
+- **Layout no-scroll** : toutes les informations visibles sans défilement sur un écran 1080p
+- **Bande du haut en 3 blocs séparés** : Station+Fréquence+Email / Uptime+Alertes / Modulation+Signal
+- **Colonne gauche** : VU-mètre + Player + RDS + niveaux L/R
+- **Colonne droite** : Analyse MPX complète (4 lignes) + historique audio pleine largeur
+- **VU-mètre unifié** : barre fine verte cohérente (même style pour audio, L/R, déviation, pilote, SNR...)
+- **Stabilité d'affichage** : largeur fixe sur les champs d'état — plus de déplacement des blocs lors des changements d'état
+
+#### Page À propos enrichie
+- **Schéma visuel du spectre MPX** (0–75 kHz) avec zones colorées
+- **6 fiches techniques** : déviation FM, pilote 19 kHz, stéréo 38 kHz, RDS 57 kHz, puissance MPX, SNR
+
+### 🛠️ Technique
+
+- **`mpx_analyzer.py`** : filtres Butterworth pré-calculés (scipy), traitement 1 chunk/4 pour économiser le CPU, thread-safe
+- **`monitor.py`** : intégration `MPXAnalyzer` dans `_master_monitor()`, flag `mpx_enabled` toggleable, surveillance sur-déviation dans `_monitor_signal()`
+- **`requirements.txt`** : ajout de `scipy`
+
+### ⚙️ Configuration
+
+Nouveaux paramètres optionnels dans `config.json` :
+
+```json
+"audio": {
+  "deviation_alert_threshold": 80.0,
+  "deviation_alert_delay": 10
+}
+```
+
+---
+
 ## [0.4.3] - 2026-03-12
 
 ### 🔧 Corrections
@@ -292,6 +338,7 @@ La v0.3.3 prévue (monitoring RDS, stabilité) n'a pas été publiée — son co
 
 ---
 
+[0.5.0]: https://github.com/LyonelB/fm-monitor/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/LyonelB/fm-monitor/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/LyonelB/fm-monitor/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/LyonelB/fm-monitor/compare/v0.4.0...v0.4.1
