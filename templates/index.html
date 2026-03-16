@@ -308,12 +308,11 @@
 
               <!-- Déviation FM -->
               <div>
-                <div class="mb-1.5">
+                <div class="h-4 flex items-center mb-1">
                   <span class="text-xs font-semibold text-gray-600">Déviation <span class="font-normal text-gray-400">FM</span></span>
                 </div>
-                <div class="flex justify-between items-baseline mb-1">
+                <div class="h-5 flex items-baseline mb-1">
                   <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-dev-peak">— kHz</div>
-                  <div class="text-xs font-mono text-gray-400" id="mpx-dev-rms">—</div>
                 </div>
                 <div class="h-1.5 rounded bg-gray-100 overflow-hidden relative">
                   <div class="absolute inset-0 flex">
@@ -325,16 +324,18 @@
                     style="background:#22c55e"></div>
                 </div>
                 <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-                  <span>0</span><span class="text-green-500">60</span><span class="text-red-400">75 kHz</span>
+                  <span>0</span><span id="mpx-dev-rms" class="text-center">—</span><span class="text-red-400">75 kHz</span>
                 </div>
               </div>
 
               <!-- Pilote 19 kHz -->
               <div>
-                <div class="mb-1.5">
+                <div class="h-4 flex items-center mb-1">
                   <span class="text-xs font-semibold text-gray-600">Pilote <span class="font-normal text-gray-400">19 kHz</span></span>
                 </div>
-                <div class="text-sm font-mono font-semibold text-gray-800 mb-1" id="mpx-val-pilot">— dBFS</div>
+                <div class="h-5 flex items-baseline mb-1">
+                  <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-pilot">— dBFS</div>
+                </div>
                 <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
                   <div id="mpx-bar-pilot" class="h-full w-0 rounded bg-green-400 transition-all duration-200"></div>
                 </div>
@@ -345,10 +346,12 @@
 
               <!-- SNR -->
               <div>
-                <div class="mb-1.5">
+                <div class="h-4 flex items-center mb-1">
                   <span class="text-xs font-semibold text-gray-600">SNR <span class="font-normal text-gray-400">signal/bruit</span></span>
                 </div>
-                <div class="text-sm font-mono font-semibold text-gray-800 mb-1" id="mpx-val-snr">— dB</div>
+                <div class="h-5 flex items-baseline mb-1">
+                  <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-snr">— dB</div>
+                </div>
                 <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
                   <div id="mpx-bar-snr" class="h-full w-0 rounded transition-all duration-200" style="background:#22c55e"></div>
                 </div>
@@ -728,13 +731,13 @@
       }
       updateDevMeter(devPeak);
       if (devEl)  devEl.textContent  = devPeak.toFixed(1) + ' kHz';
-      if (rmsEl)  rmsEl.textContent  = 'RMS : ' + devRms.toFixed(1) + ' kHz';
+      if (rmsEl)  rmsEl.textContent  = devRms.toFixed(1) + ' kHz';
 
       // Couleur valeur peak selon zone
       if (devEl) {
-        if (devPeak > 75)      devEl.className = 'text-2xl font-bold font-mono text-red-600';
-        else if (devPeak > 70) devEl.className = 'text-2xl font-bold font-mono text-yellow-500';
-        else                   devEl.className = 'text-2xl font-bold font-mono text-gray-900';
+        if (devPeak > 75)      devEl.className = 'text-sm font-mono font-semibold text-red-600';
+        else if (devPeak > 70) devEl.className = 'text-sm font-mono font-semibold text-yellow-500';
+        else                   devEl.className = 'text-sm font-mono font-semibold text-gray-800';
       }
 
       // ── Puissance MPX ──────────────────────────────────────
