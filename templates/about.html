@@ -298,6 +298,133 @@ rtl_test -t</pre>
         </div>
       </div>
 
+      <!-- ====== Analyse MPX ====== -->
+      <div class="rounded bg-white p-6 shadow">
+        <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Analyse du signal MPX
+        </h2>
+        <p class="text-sm text-gray-500 mb-6">Le signal FM broadcast n'est pas un simple signal audio — c'est un multiplex (MPX) complexe qui transporte plusieurs informations en parallèle sur différentes sous-porteuses.</p>
+
+        <!-- Schéma MPX -->
+        <div class="mb-6 rounded-lg bg-gray-50 border border-gray-200 p-4">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Spectre MPX FM (0 – 75 kHz)</div>
+          <div class="relative h-16 bg-gray-900 rounded overflow-hidden font-mono text-xs">
+            <!-- Fond -->
+            <div class="absolute inset-0 flex">
+              <div class="bg-green-900 opacity-40" style="width:20%"></div><!-- L+R -->
+              <div class="bg-gray-800 opacity-60" style="width:5.3%"></div><!-- 15-19kHz -->
+              <div class="bg-yellow-900 opacity-50" style="width:1.3%"></div><!-- pilote -->
+              <div class="bg-gray-800 opacity-60" style="width:12%"></div><!-- 20-38kHz -->
+              <div class="bg-blue-900 opacity-40" style="width:26.7%"></div><!-- L-R DSB -->
+              <div class="bg-gray-800 opacity-60" style="width:12%"></div><!-- 53-57kHz -->
+              <div class="bg-purple-900 opacity-50" style="width:10.7%"></div><!-- RDS -->
+              <div class="bg-gray-800 opacity-60" style="flex:1"></div>
+            </div>
+            <!-- Labels -->
+            <div class="absolute inset-0 flex items-center px-2 gap-1 text-white">
+              <div class="text-center" style="width:20%">
+                <div class="text-green-400 font-bold">L+R</div>
+                <div class="text-gray-400" style="font-size:9px">0–15 kHz</div>
+              </div>
+              <div class="text-center" style="width:5.3%"></div>
+              <div class="text-center" style="width:1.3%">
+                <div class="text-yellow-300 font-bold" style="font-size:9px">♪</div>
+              </div>
+              <div class="text-center" style="width:12%"></div>
+              <div class="text-center" style="width:26.7%">
+                <div class="text-blue-300 font-bold">L−R</div>
+                <div class="text-gray-400" style="font-size:9px">23–53 kHz</div>
+              </div>
+              <div class="text-center" style="width:12%"></div>
+              <div class="text-center" style="width:10.7%">
+                <div class="text-purple-300 font-bold">RDS</div>
+                <div class="text-gray-400" style="font-size:9px">57 kHz</div>
+              </div>
+            </div>
+            <!-- Graduation -->
+            <div class="absolute bottom-0 left-0 right-0 flex justify-between px-1 text-gray-500" style="font-size:8px">
+              <span>0</span><span>15</span><span>19</span><span>38</span><span>57</span><span>75 kHz</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grille des mesures -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <!-- Déviation FM -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">Déviation FM</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">0 – 75 kHz</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">La déviation FM est l'amplitude de la variation instantanée de la fréquence de la porteuse autour de sa fréquence nominale. En broadcast FM, la déviation maximale autorisée est de <strong>±75 kHz</strong>. Une sur-déviation dégrade la qualité sonore et peut empiéter sur les canaux adjacents.</p>
+            <div class="mt-2 flex gap-3 text-xs">
+              <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">0–60 kHz ✓ normal</span>
+              <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded">60–70 kHz ⚠ élevé</span>
+              <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded">&gt;70 kHz ✗ sur-déviation</span>
+            </div>
+          </div>
+
+          <!-- Pilote 19 kHz -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-yellow-400 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">Ton pilote 19 kHz</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">19 000 Hz</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">Le ton pilote est une sinusoïde pure à <strong>19 kHz</strong> transmise par l'émetteur FM pour signaler la présence d'un programme stéréo. Le récepteur l'utilise comme référence de phase pour régénérer la sous-porteuse à 38 kHz nécessaire au décodage stéréo. Son absence indique une diffusion mono. Son niveau est normalement de 8 à 10 % de la déviation totale.</p>
+          </div>
+
+          <!-- Stéréo 38 kHz -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">Signal stéréo L−R (38 kHz)</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">23 – 53 kHz</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">Le signal stéréo est transmis en <strong>DSB-SC</strong> (double bande latérale à porteuse supprimée) centré à 38 kHz — exactement le double du pilote. Il contient la différence <em>Gauche−Droite</em> (L−R). À la réception, en combinant le signal mono (L+R) avec ce signal démodulé, on reconstitue les deux canaux : <strong>L = (L+R) + (L−R)</strong> et <strong>R = (L+R) − (L−R)</strong>. La porteuse 38 kHz n'est pas transmise — elle est régénérée localement grâce au pilote 19 kHz.</p>
+          </div>
+
+          <!-- RDS 57 kHz -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-purple-500 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">Sous-porteuse RDS (57 kHz)</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">57 000 Hz</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">Le <strong>RDS</strong> (Radio Data System, norme CEI 62106) transmet des données numériques à <strong>1 187,5 bit/s</strong> sur une sous-porteuse à 57 kHz — le triple du pilote, en quadrature de phase. Il transporte le nom de la station (PS), le texte défilant (RadioText), le code d'identification (PI), le type de programme (PTY), l'heure (CT) et les fréquences alternatives (AF). Son niveau est typiquement 2 à 5 % de la déviation totale.</p>
+          </div>
+
+          <!-- Puissance MPX -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-gray-500 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">Puissance MPX</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">dBFS</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">La puissance MPX est le niveau RMS global du signal multiplex après démodulation FM, exprimé en <strong>dBFS</strong> (dB par rapport au plein échelle numérique). Elle représente l'énergie totale combinée de tous les composants : audio L+R, stéréo L−R, pilote et RDS. C'est un indicateur global de la présence et de la vigueur du signal. Une valeur très basse peut indiquer un signal faible ou une antenne défaillante.</p>
+          </div>
+
+          <!-- SNR -->
+          <div class="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-3 h-3 rounded-full bg-teal-500 flex-shrink-0"></div>
+              <h3 class="font-semibold text-gray-900 text-sm">SNR — Rapport signal/bruit</h3>
+              <span class="ml-auto text-xs font-mono text-gray-400">dB</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">Le <strong>SNR</strong> (Signal-to-Noise Ratio) mesure le rapport entre le niveau du signal audio utile (bande 100 Hz–15 kHz) et le plancher de bruit mesuré dans la bande 60–75 kHz, une zone normalement vide en FM standard. Un SNR élevé indique un signal propre ; un SNR faible trahit une réception dégradée, une interférence ou un signal d'émetteur trop faible.</p>
+            <div class="mt-2 flex gap-3 text-xs">
+              <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded">&gt;40 dB ✓ excellent</span>
+              <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded">25–40 dB ⚠ correct</span>
+              <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded">&lt;25 dB ✗ dégradé</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Liens -->
       <div class="rounded bg-white p-6 shadow">
         <h2 class="text-lg font-bold text-gray-900 mb-4">Liens utiles</h2>
