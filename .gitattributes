@@ -1,0 +1,3 @@
+# Ignorer les assets tiers pour la détection de langage
+static/assets/** linguist-vendored
+venv/** linguist-vendored
