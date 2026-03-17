@@ -433,6 +433,9 @@ class FMMonitor:
                             self.rds_last_seen = time.time()
                             self.rds_ever_received = True
                             self.rds_ok = True
+                            if not self._logo_searched:
+                                import threading as _t
+                                _t.Thread(target=self._fetch_station_logo, daemon=True).start()
 
                         if 'radiotext' in data:
                             rt_full = data['radiotext'].strip()
@@ -733,27 +736,68 @@ class FMMonitor:
                 time.sleep(1)
 
     def _fetch_station_logo(self):
+        """
+        Recherche le logo de la station reçue.
+        Priorité 1 : rds-station-db (PI code → logo fiable)
+        Priorité 2 : radio-browser.info (fallback par nom/fréquence)
+        """
         import time as _time
         if _time.time() - self._logo_last_attempt < 60:
             return
         self._logo_last_attempt = _time.time()
+
         try:
+            # Attendre max 5s que le PI soit disponible
+            for _ in range(10):
+                pi = self.stats.get('pi', '').strip().upper()
+                if pi and pi != '-':
+                    break
+                _time.sleep(0.5)
+
+            pi = self.stats.get('pi', '').strip().upper()
+            # Normaliser : "0xFA41" → "FA41"
+            if pi.upper().startswith('0X'):
+                pi = pi[2:]
+
             ps = self.stats.get('ps', '').strip()
             freq_raw = self.rtl_config.get('frequency', '')
             freq_mhz = freq_raw.replace('M', '').replace('m', '')
-            station_name = self.config.get('station', {}).get('name', ps)
-            if not station_name or station_name == '-':
-                station_name = ps
+            station_name = self.config.get('station', {}).get('name', ps) or ps
+
+            # ── Priorité 1 : rds-station-db ──────────────────────────────
+            if pi and pi != '-':
+                try:
+                    from rds_lookup import RDSLookup
+                    lookup = RDSLookup(country='FR', auto_refresh=False)
+                    station = lookup.get_by_pi(pi)
+                    if station and station.get('logo_url'):
+                        logo_url = station['logo_url']
+                        logger.info(f"Logo rds-station-db [{pi}] {station.get('name')}: {logo_url}")
+                        self._logo_searched = True
+                        with self.stats_lock:
+                            self.stats['station_logo'] = logo_url
+                        return
+                    elif station:
+                        logger.info(f"Station [{pi}] {station.get('name')} trouvée mais sans logo")
+                except Exception as e:
+                    logger.warning(f"rds_lookup indisponible: {e}")
+
+            # ── Priorité 2 : radio-browser.info (fallback) ───────────────
             if not station_name or station_name == '-':
                 return
-            logger.info(f"Recherche logo: {station_name} @ {freq_mhz} MHz")
+
+            logger.info(f"Recherche logo radio-browser: {station_name} @ {freq_mhz} MHz")
+
             valid_ext = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')
             def is_valid(url):
                 return bool(url) and any(url.lower().split('?')[0].endswith(e) for e in valid_ext)
+
             logo_url = None
             for search_name in [station_name, ps]:
                 if logo_url:
                     break
+                if not search_name or search_name == '-':
+                    continue
                 try:
                     resp = requests.get(
                         "https://de1.api.radio-browser.info/json/stations/search",
@@ -766,14 +810,15 @@ class FMMonitor:
                 for s in stations:
                     if str(s.get('frequency', '')).strip() == freq_mhz and is_valid(s.get('favicon', '')):
                         logo_url = s['favicon']
-                        logger.info(f"Logo trouvé (freq exacte): {logo_url}")
+                        logger.info(f"Logo radio-browser (freq exacte): {logo_url}")
                         break
                 if not logo_url:
                     for s in stations:
                         if is_valid(s.get('favicon', '')):
                             logo_url = s['favicon']
-                            logger.info(f"Logo trouvé (fallback): {logo_url}")
+                            logger.info(f"Logo radio-browser (fallback): {logo_url}")
                             break
+
             if logo_url:
                 self._logo_searched = True
                 with self.stats_lock:
@@ -781,6 +826,7 @@ class FMMonitor:
             else:
                 self._logo_fail_count += 1
                 logger.info(f"Aucun logo trouvé pour {station_name} (échec #{self._logo_fail_count})")
+
         except Exception as e:
             logger.warning(f"Erreur recherche logo: {e}")
 
