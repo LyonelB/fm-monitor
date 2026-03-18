@@ -584,6 +584,9 @@
                     logoImg.setAttribute('data-src', stats.station_logo);
                     logoImg.src = stats.station_logo;
                     logoImg.onerror = () => {
+                        // URL cassée : effacer data-src pour permettre une tentative ultérieure
+                        logoImg.removeAttribute('data-src');
+                        logoImg.src = '';
                         logoImg.classList.add('hidden');
                         if (logoPlaceholder) logoPlaceholder.classList.remove('hidden');
                     };

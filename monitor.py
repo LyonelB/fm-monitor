@@ -84,6 +84,8 @@ class FMMonitor:
         self._logo_searched = False
         self._logo_last_attempt = 0
         self._logo_fail_count = 0
+        self._rds_db_reload = False
+        self._rds_lookup = None
 
         # Lock pour thread-safety
         self.stats_lock = threading.Lock()
@@ -227,6 +229,11 @@ class FMMonitor:
                 self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
                 self.rds_thread.start()
 
+            self.rds_db_watcher_thread = threading.Thread(
+                target=self._rds_db_watcher, daemon=True
+            )
+            self.rds_db_watcher_thread.start()
+            logger.info("Watcher rds-station-db démarré (cycle 24h)")
             logger.info("Surveillance FM démarrée avec succès")
         except Exception as e:
             logger.error(f"Erreur lors du démarrage: {e}")
@@ -429,7 +436,21 @@ class FMMonitor:
                                 _t.Thread(target=self._fetch_station_logo, daemon=True).start()
 
                         if 'pi' in data:
-                            self.stats['pi'] = data['pi']
+                            new_pi = data['pi'].strip().upper().lstrip('0X').lstrip('0x')
+                            if new_pi.startswith('X'):
+                                new_pi = new_pi[1:]
+                            old_pi = self.stats.get('pi', '-')
+                            if new_pi != old_pi and new_pi not in ('', '-'):
+                                logger.info(f'PI changé {old_pi} -> {new_pi}, réinit logo')
+                                self._logo_searched = False
+                                self._logo_last_attempt = 0
+                                self.stats['station_logo'] = None
+                                self._rds_db_reload = True
+                                self.stats['pi'] = new_pi  # affecter AVANT de lancer le thread
+                                import threading as _t
+                                _t.Thread(target=self._fetch_station_logo, daemon=True).start()
+                            else:
+                                self.stats['pi'] = new_pi
                             self.rds_last_seen = time.time()
                             self.rds_ever_received = True
                             self.rds_ok = True
@@ -735,97 +756,129 @@ class FMMonitor:
                 logger.error(f"Erreur surveillance: {e}")
                 time.sleep(1)
 
+    def _get_rds_lookup(self, force_refresh=False):
+        """Instance RDSLookup partagée, rechargée si demandé."""
+        try:
+            from rds_lookup import RDSLookup
+            if self._rds_lookup is None:
+                self._rds_lookup = RDSLookup(country='FR', auto_refresh=False)
+            if force_refresh:
+                self._rds_lookup.force_refresh()
+                logger.info("Base rds-station-db rechargée depuis GitHub")
+            return self._rds_lookup
+        except Exception as e:
+            logger.warning(f"rds_lookup indisponible: {e}")
+            return None
+
+    def _rds_db_watcher(self):
+        """
+        Thread de surveillance rds-station-db.
+        Toutes les 24h (ou sur changement de PI) :
+          - Recharge la base depuis GitHub
+          - Met a jour station_logo si le logo du PI courant a change
+"""
+        import time as _time
+        INTERVAL = 24 * 3600
+        while self.running:
+            elapsed = 0
+            while self.running and elapsed < INTERVAL:
+                _time.sleep(60)
+                elapsed += 60
+                if self._rds_db_reload:
+                    logger.info("Watcher: rechargement anticipe (changement PI)")
+                    self._rds_db_reload = False
+                    break
+            if not self.running:
+                break
+            try:
+                pi = self.stats.get('pi', '').strip().upper()
+                if not pi or pi == '-':
+                    continue
+                lookup = self._get_rds_lookup(force_refresh=True)
+                if not lookup:
+                    continue
+                station = lookup.get_by_pi(pi)
+                if not station:
+                    logger.info(f"Watcher: PI {pi} non trouve dans la base")
+                    continue
+                new_logo = station.get('logo_url')
+                current_logo = self.stats.get('station_logo')
+                if new_logo and new_logo != current_logo:
+                    logger.info(
+                        f"Watcher: logo mis a jour [{pi}] {station.get('name')}: {new_logo}"
+                    )
+                    with self.stats_lock:
+                        self.stats['station_logo'] = new_logo
+                else:
+                    logger.info(
+                        f"Watcher: logo inchange [{pi}] {station.get('name')}"
+                    )
+            except Exception as e:
+                logger.warning(f"Watcher rds-station-db erreur: {e}")
+
     def _fetch_station_logo(self):
         """
-        Recherche le logo de la station reçue.
-        Priorité 1 : rds-station-db (PI code → logo fiable)
-        Priorité 2 : radio-browser.info (fallback par nom/fréquence)
-        """
+        Recherche le logo de la station recue.
+        Recherche le logo de la station recue via rds-station-db (PI + PS).
+"""
         import time as _time
         if _time.time() - self._logo_last_attempt < 60:
             return
         self._logo_last_attempt = _time.time()
-
         try:
-            # Attendre max 5s que le PI soit disponible
             for _ in range(10):
                 pi = self.stats.get('pi', '').strip().upper()
-                if pi and pi != '-':
+                ps = self.stats.get('ps', '').strip().upper()
+                if pi and pi != '-' and ps and ps != '-':
                     break
                 _time.sleep(0.5)
-
             pi = self.stats.get('pi', '').strip().upper()
-            # Normaliser : "0xFA41" → "FA41"
-            if pi.upper().startswith('0X'):
-                pi = pi[2:]
-
             ps = self.stats.get('ps', '').strip()
+            ps_upper = ps.upper()
             freq_raw = self.rtl_config.get('frequency', '')
             freq_mhz = freq_raw.replace('M', '').replace('m', '')
             station_name = self.config.get('station', {}).get('name', ps) or ps
 
-            # ── Priorité 1 : rds-station-db ──────────────────────────────
-            if pi and pi != '-':
-                try:
-                    from rds_lookup import RDSLookup
-                    lookup = RDSLookup(country='FR', auto_refresh=False)
-                    station = lookup.get_by_pi(pi)
-                    if station and station.get('logo_url'):
+            # Validation minimale : PI et PS doivent être disponibles
+            if not pi or pi == '-' or not ps or ps == '-':
+                logger.info("PI ou PS non disponible, logo non recherché")
+                return
+
+            # Priorite 1 : rds-station-db
+            # force_refresh=True : recharge depuis GitHub pour avoir le logo à jour
+            lookup = self._get_rds_lookup(force_refresh=True)
+            if lookup:
+                station = lookup.get_by_pi(pi)
+                if station:
+                    # Validation croisée PI + PS
+                    db_ps = station.get('ps', '').strip().upper()
+                    if db_ps and db_ps != ps_upper:
+                        logger.warning(
+                            f"PI/PS mismatch [{pi}]: reçu PS='{ps}' "
+                            f"mais base PS='{station.get('ps')}' → logo refusé"
+                        )
+                    elif station.get('logo_url'):
                         logo_url = station['logo_url']
-                        logger.info(f"Logo rds-station-db [{pi}] {station.get('name')}: {logo_url}")
+                        logger.info(
+                            f"Logo rds-station-db [{pi}/{ps}] "
+                            f"{station.get('name')}: {logo_url}"
+                        )
                         self._logo_searched = True
                         with self.stats_lock:
                             self.stats['station_logo'] = logo_url
                         return
-                    elif station:
-                        logger.info(f"Station [{pi}] {station.get('name')} trouvée mais sans logo")
-                except Exception as e:
-                    logger.warning(f"rds_lookup indisponible: {e}")
+                    else:
+                        logger.info(
+                            f"Station [{pi}/{ps}] {station.get('name')} "
+                            f"trouvee mais sans logo"
+                        )
 
-            # ── Priorité 2 : radio-browser.info (fallback) ───────────────
-            if not station_name or station_name == '-':
-                return
-
-            logger.info(f"Recherche logo radio-browser: {station_name} @ {freq_mhz} MHz")
-
-            valid_ext = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')
-            def is_valid(url):
-                return bool(url) and any(url.lower().split('?')[0].endswith(e) for e in valid_ext)
-
-            logo_url = None
-            for search_name in [station_name, ps]:
-                if logo_url:
-                    break
-                if not search_name or search_name == '-':
-                    continue
-                try:
-                    resp = requests.get(
-                        "https://de1.api.radio-browser.info/json/stations/search",
-                        params={'name': search_name, 'limit': 10, 'hidebroken': 'true'},
-                        timeout=5
-                    )
-                    stations = resp.json()
-                except Exception:
-                    continue
-                for s in stations:
-                    if str(s.get('frequency', '')).strip() == freq_mhz and is_valid(s.get('favicon', '')):
-                        logo_url = s['favicon']
-                        logger.info(f"Logo radio-browser (freq exacte): {logo_url}")
-                        break
-                if not logo_url:
-                    for s in stations:
-                        if is_valid(s.get('favicon', '')):
-                            logo_url = s['favicon']
-                            logger.info(f"Logo radio-browser (fallback): {logo_url}")
-                            break
-
-            if logo_url:
-                self._logo_searched = True
-                with self.stats_lock:
-                    self.stats['station_logo'] = logo_url
-            else:
-                self._logo_fail_count += 1
-                logger.info(f"Aucun logo trouvé pour {station_name} (échec #{self._logo_fail_count})")
+            # Aucun logo trouvé dans rds-station-db
+            self._logo_fail_count += 1
+            logger.info(
+                f"Aucun logo trouve pour [{pi}/{ps}] dans rds-station-db "
+                f"(echec #{self._logo_fail_count})"
+            )
 
         except Exception as e:
             logger.warning(f"Erreur recherche logo: {e}")
@@ -874,6 +927,8 @@ class FMMonitor:
         self._logo_searched = False
         self._logo_last_attempt = 0
         self._logo_fail_count = 0
+        self._rds_db_reload = False
+        self._rds_lookup = None
         self.stats['station_logo'] = None
         self.deviation_alert_sent = False
         self.deviation_over_start = None

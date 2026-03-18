@@ -362,6 +362,39 @@
         </div>
       </div>
 
+      <!-- Sauvegarde & Restauration -->
+      <div class="mb-6 rounded bg-white p-6 shadow">
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">Sauvegarde & Restauration</h3>
+        <p class="text-xs text-gray-500 mb-4">Le fichier ZIP contient : <code>config.json</code>, <code>.env</code> et les certificats SSL.</p>
+
+        <div class="flex flex-wrap gap-3 items-center">
+
+          <!-- Export -->
+          <a href="/api/config/export"
+             class="flex items-center gap-2 rounded bg-gray-700 px-5 py-2.5 text-white text-sm font-medium hover:bg-gray-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Exporter la configuration
+          </a>
+
+          <!-- Import -->
+          <label id="import-label"
+                 class="flex items-center gap-2 rounded border border-gray-300 bg-white px-5 py-2.5 text-gray-700 text-sm font-medium hover:bg-gray-50 transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            <span id="import-label-text">Importer un backup</span>
+            <input type="file" id="importInput" accept=".zip" class="hidden" onchange="importConfig(this)">
+          </label>
+
+          <!-- Résultat import -->
+          <span id="import-result" class="text-sm hidden"></span>
+        </div>
+      </div>
+
       <!-- Boutons -->
       <div class="flex gap-4">
         <button id="save-btn" onclick="saveConfig()" class="rounded bg-blue-600 px-6 py-2.5 text-white font-medium hover:bg-blue-700 transition flex items-center gap-2">
@@ -713,6 +746,52 @@
         document.getElementById('toast-text').textContent = text;
         toast.className = 'fixed bottom-6 right-6 z-50 max-w-sm rounded-lg shadow-lg px-5 py-4 flex items-center gap-3 text-white text-sm font-medium ' + bgClass;
         setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
+
+    // =============================================
+    // EXPORT / IMPORT CONFIGURATION
+    // =============================================
+    async function importConfig(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const confirmed = confirm(
+            `Importer "${file.name}" ?\n\nL'ancienne configuration sera sauvegardée dans backup_before_import/\nLe service fm-monitor redémarrera automatiquement.`
+        );
+        if (!confirmed) { input.value = ''; return; }
+
+        const labelText = document.getElementById('import-label-text');
+        const result    = document.getElementById('import-result');
+        labelText.textContent = 'Import en cours…';
+        result.className = 'text-sm hidden';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const resp = await fetch('/api/config/import', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            if (data.success) {
+                const detail = `v${data.version} — ${data.date?.slice(0, 10)} — Fichiers : ${data.restored.join(', ')}`;
+                result.textContent = `✅ ${data.message} (${detail})`;
+                result.className = 'text-sm text-green-600';
+                showToast('⏳', 'Restauration OK — redémarrage du service en cours…', 'bg-orange-500');
+                setTimeout(() => location.reload(), 6000);
+            } else {
+                result.textContent = `❌ ${data.error}`;
+                result.className = 'text-sm text-red-600';
+                showToast('✗', 'Erreur import : ' + data.error, 'bg-red-600');
+            }
+        } catch (e) {
+            result.textContent = `❌ Erreur réseau : ${e.message}`;
+            result.className = 'text-sm text-red-600';
+            showToast('✗', 'Erreur réseau lors de l\'import', 'bg-red-600');
+        } finally {
+            labelText.textContent = 'Importer un backup';
+            result.classList.remove('hidden');
+            input.value = '';
+        }
     }
 
     // =============================================

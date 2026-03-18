@@ -2,7 +2,7 @@
 """
 Application Flask pour le monitoring FM - Version sécurisée complète
 """
-from flask import Flask, render_template, Response, jsonify, request, session, redirect, url_for
+from flask import Flask, render_template, Response, jsonify, request, session, redirect, url_for, send_file
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -12,12 +12,33 @@ import time
 import json
 import subprocess
 import os
+import io
+import zipfile
+import shutil
+import socket
+from datetime import datetime
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
 
 # Charger les variables d'environnement
 load_dotenv()
+
+# ── Configuration sauvegarde / restauration ──────────────────────
+BASE_DIR    = "/home/graffiti/fm-monitor"
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+ENV_PATH    = os.path.join(BASE_DIR, ".env")
+SSL_CERT    = os.path.join(BASE_DIR, "ssl", "cert.pem")
+SSL_KEY     = os.path.join(BASE_DIR, "ssl", "key.pem")
+APP_VERSION = "0.5.0"
+
+BACKUP_FILES = [
+    (CONFIG_PATH, "config.json"),
+    (ENV_PATH,    ".env"),
+    (SSL_CERT,    "ssl/cert.pem"),
+    (SSL_KEY,     "ssl/key.pem"),
+]
+# ─────────────────────────────────────────────────────────────────
 
 # Configuration du logging
 logging.basicConfig(
@@ -196,6 +217,129 @@ def get_config_full():
     except Exception as e:
         logger.error(f"Erreur lors de la lecture de la config: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/config/export')
+@auth.login_required
+def export_config():
+    """Génère et télécharge un ZIP de sauvegarde complet."""
+    try:
+        buffer = io.BytesIO()
+
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Manifest
+            manifest = {
+                "app":      "fm-monitor",
+                "version":  APP_VERSION,
+                "date":     datetime.now().isoformat(),
+                "hostname": socket.gethostname(),
+            }
+            zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+
+            # Fichiers de config
+            for real_path, zip_name in BACKUP_FILES:
+                if os.path.exists(real_path):
+                    zf.write(real_path, zip_name)
+                else:
+                    logger.warning(f"Export : fichier absent, ignoré : {real_path}")
+
+        buffer.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename  = f"fm-monitor-backup_{timestamp}.zip"
+
+        return send_file(
+            buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        logger.error(f"Erreur export config : {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/config/import', methods=['POST'])
+@auth.login_required
+@csrf.exempt
+def import_config():
+    """Importe un ZIP de sauvegarde fm-monitor et redémarre le service."""
+    if 'file' not in request.files:
+        return jsonify({"error": "Aucun fichier fourni"}), 400
+
+    file = request.files['file']
+    if not file.filename.endswith('.zip'):
+        return jsonify({"error": "Le fichier doit être un .zip"}), 400
+
+    try:
+        buffer = io.BytesIO(file.read())
+        if not zipfile.is_zipfile(buffer):
+            return jsonify({"error": "Fichier ZIP invalide"}), 400
+
+        buffer.seek(0)
+        with zipfile.ZipFile(buffer, 'r') as zf:
+            names = zf.namelist()
+
+            # Vérification manifest
+            if "manifest.json" not in names:
+                return jsonify({"error": "manifest.json absent — ce ZIP ne vient pas de fm-monitor"}), 400
+
+            manifest = json.loads(zf.read("manifest.json"))
+            if manifest.get("app") != "fm-monitor":
+                return jsonify({"error": "Ce backup ne correspond pas à fm-monitor"}), 400
+
+            # Vérification config.json présent et valide
+            if "config.json" not in names:
+                return jsonify({"error": "config.json absent du ZIP"}), 400
+
+            new_config = json.loads(zf.read("config.json"))
+            REQUIRED_KEYS = ["rtl_sdr", "audio", "email"]
+            missing = [k for k in REQUIRED_KEYS if k not in new_config]
+            if missing:
+                return jsonify({"error": f"config.json incomplet, sections manquantes : {', '.join(missing)}"}), 400
+
+            # Backup de l'existant avant écrasement
+            backup_dir = os.path.join(BASE_DIR, "backup_before_import")
+            os.makedirs(backup_dir, exist_ok=True)
+            for real_path, zip_name in BACKUP_FILES:
+                if os.path.exists(real_path):
+                    dest = os.path.join(backup_dir, zip_name.replace("/", "_"))
+                    shutil.copy2(real_path, dest)
+
+            # Extraction
+            restored = []
+            for zip_name, real_path in [(z, r) for r, z in BACKUP_FILES]:
+                if zip_name in names:
+                    os.makedirs(os.path.dirname(real_path), exist_ok=True)
+                    with open(real_path, 'wb') as f:
+                        f.write(zf.read(zip_name))
+                    restored.append(zip_name)
+
+        # Redémarrage du service dans un thread (laisse Flask renvoyer la réponse d'abord)
+        import threading
+        def _restart():
+            import time as _time
+            _time.sleep(1)
+            subprocess.Popen(
+                ["sudo", "systemctl", "restart", "fm-monitor"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        threading.Thread(target=_restart, daemon=True).start()
+
+        return jsonify({
+            "success":  True,
+            "version":  manifest.get("version"),
+            "date":     manifest.get("date"),
+            "restored": restored,
+            "message":  "Configuration restaurée. Le service redémarre dans 1 seconde…"
+        })
+
+    except json.JSONDecodeError as e:
+        return jsonify({"error": f"JSON invalide dans le ZIP : {e}"}), 400
+    except Exception as e:
+        logger.error(f"Erreur import config : {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/config/save', methods=['POST'])
 @auth.login_required
