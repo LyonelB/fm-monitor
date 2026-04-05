@@ -5,6 +5,17 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.5.1] - 2026-03-17
+
+### Ajouté
+- Export/import de la configuration (ZIP horodaté avec config.json, .env, certificats SSL)
+- Lookup logo station via rds-station-db (PI + PS) avec validation croisée
+- Watcher rds-station-db : rafraîchissement automatique toutes les 24h
+- Réinitialisation automatique du logo lors d'un changement de PI
+
+### Supprimé
+- Suppression du fallback radio-browser.info (trop peu fiable)
+
 ## [0.5.0] - 2026-03-16
 
 ### 🎉 Fonctionnalités

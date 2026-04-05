@@ -4,153 +4,112 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Connexion - FM Monitor</title>
-
-  <!-- Tailwind CSS CDN -->
+  <title>FM Monitor — Connexion</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .field-input { width:100%; padding:8px 12px 8px 36px; border:1px solid #e5e7eb; border-radius:8px; font-size:0.875rem; color:#111827; outline:none; transition:border 0.15s; background:white; }
+    .field-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px #eff6ff; }
+  </style>
 </head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center px-4">
 
-<body class="bg-gray-100">
+  <div class="w-full max-w-sm">
 
-  <div class="min-h-screen flex items-center justify-center px-4 py-12">
-    <div class="max-w-md w-full">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">FM</div>
+      <h1 class="text-lg font-semibold text-gray-900">FM Monitor</h1>
+      <p class="text-xs text-gray-400 mt-1">Surveillance radio FM en temps réel</p>
+    </div>
 
-      <!-- Titre -->
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">FM Monitor</h1>
-        <p class="text-gray-600 mt-2">Surveillance radio FM en temps réel</p>
+    <!-- Card -->
+    <div class="bg-white border border-gray-100 rounded-xl p-7 shadow-sm">
+
+      <h2 class="text-sm font-semibold text-gray-700 mb-5">Connexion</h2>
+
+      <!-- Message d'erreur -->
+      <div id="error-message" class="hidden mb-4 bg-red-50 border border-red-100 rounded-lg px-4 py-3 flex items-center gap-2">
+        <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <p class="text-xs text-red-700" id="error-text">Nom d'utilisateur ou mot de passe incorrect</p>
       </div>
 
-      <!-- Card de connexion -->
-      <div class="bg-white rounded-lg shadow-lg p-8">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Connexion</h2>
+      <!-- Formulaire -->
+      <form id="login-form" class="space-y-4">
 
-        <!-- Message d'erreur -->
-        <div id="error-message" class="hidden mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-red-700" id="error-text">Nom d'utilisateur ou mot de passe incorrect</p>
-            </div>
+        <!-- Username -->
+        <div>
+          <div class="text-xs text-gray-500 font-medium mb-1">Nom d'utilisateur</div>
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <input type="text" id="username" name="username" required autocomplete="username"
+              class="field-input" placeholder="Nom d'utilisateur">
           </div>
         </div>
 
-        <!-- Formulaire -->
-        <form id="login-form">
-          <!-- Username -->
-          <div class="mb-6">
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-              Nom d'utilisateur
-            </label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                required
-                autocomplete="username"
-                class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Entrez votre nom d'utilisateur"
-              >
-            </div>
+        <!-- Password -->
+        <div>
+          <div class="text-xs text-gray-500 font-medium mb-1">Mot de passe</div>
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            <input type="password" id="password" name="password" required autocomplete="current-password"
+              class="field-input" placeholder="Mot de passe">
           </div>
+        </div>
 
-          <!-- Password -->
-          <div class="mb-6">
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-              Mot de passe
-            </label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                autocomplete="current-password"
-                class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Entrez votre mot de passe"
-              >
-            </div>
-          </div>
+        <!-- Remember me -->
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="remember" name="remember"
+            class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+          <label for="remember" class="text-xs text-gray-600 cursor-pointer">Se souvenir de moi</label>
+        </div>
 
-          <!-- Remember me -->
-          <div class="flex items-center mb-6">
-            <input
-              type="checkbox"
-              id="remember"
-              name="remember"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            >
-            <label for="remember" class="ml-2 block text-sm text-gray-700">
-              Se souvenir de moi
-            </label>
-          </div>
+        <!-- Submit -->
+        <button type="submit" id="submit-button"
+          class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2">
+          <span id="button-text">Se connecter</span>
+          <span id="button-spinner" class="hidden">
+            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Connexion…
+          </span>
+        </button>
 
-          <!-- Submit button -->
-          <button
-            type="submit"
-            id="submit-button"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <span id="button-text">Se connecter</span>
-            <span id="button-spinner" class="hidden">
-              <svg class="animate-spin h-5 w-5 text-white inline" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Connexion...
-            </span>
-          </button>
-        </form>
-      </div>
-
-      <!-- Footer -->
-      <div class="text-center mt-8">
-        <p class="text-sm text-gray-600">
-          FM Monitor - Surveillance radio FM
-        </p>
-        <p class="text-xs text-gray-500 mt-2">
-          Version 2.0 - © 2026
-        </p>
-      </div>
+      </form>
     </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-6">
+      <p class="text-xs text-gray-400">FM Monitor · Surveillance radio FM · © 2026</p>
+    </div>
+
   </div>
 
   <script>
-    // Fonction pour récupérer le token CSRF
     function getCSRFToken() {
       const meta = document.querySelector('meta[name="csrf-token"]');
       return meta ? meta.content : '';
     }
 
-    const form = document.getElementById('login-form');
-    const errorMessage = document.getElementById('error-message');
-    const errorText = document.getElementById('error-text');
-    const submitButton = document.getElementById('submit-button');
-    const buttonText = document.getElementById('button-text');
+    const form          = document.getElementById('login-form');
+    const errorMessage  = document.getElementById('error-message');
+    const errorText     = document.getElementById('error-text');
+    const submitButton  = document.getElementById('submit-button');
+    const buttonText    = document.getElementById('button-text');
     const buttonSpinner = document.getElementById('button-spinner');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      // Masquer les erreurs précédentes
       errorMessage.classList.add('hidden');
 
-      // Désactiver le bouton et afficher le spinner
       submitButton.disabled = true;
       buttonText.classList.add('hidden');
       buttonSpinner.classList.remove('hidden');
@@ -163,28 +122,18 @@
       };
 
       try {
-        const csrfToken = getCSRFToken();  // Récupérer le token CSRF
-        
         const response = await fetch('/login', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken  // Protection CSRF
-          },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
           body: JSON.stringify(data)
         });
-
         const result = await response.json();
 
         if (response.ok && result.status === 'success') {
-          // Redirection vers le dashboard
           window.location.href = result.redirect || '/';
         } else {
-          // Afficher l'erreur
-          errorText.textContent = result.message || 'Nom d\'utilisateur ou mot de passe incorrect';
+          errorText.textContent = result.message || "Nom d'utilisateur ou mot de passe incorrect";
           errorMessage.classList.remove('hidden');
-
-          // Réactiver le bouton
           submitButton.disabled = false;
           buttonText.classList.remove('hidden');
           buttonSpinner.classList.add('hidden');
@@ -193,15 +142,12 @@
         console.error('Erreur de connexion:', error);
         errorText.textContent = 'Erreur de connexion au serveur';
         errorMessage.classList.remove('hidden');
-
-        // Réactiver le bouton
         submitButton.disabled = false;
         buttonText.classList.remove('hidden');
         buttonSpinner.classList.add('hidden');
       }
     });
 
-    // Focus automatique sur le champ username
     document.getElementById('username').focus();
   </script>
 </body>

@@ -4,431 +4,369 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>FM Monitor - Dashboard</title>
-
-  <!-- Tailwind CSS CDN (à remplacer par fichiers locaux) -->
+  <title>FM Monitor — Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Chart.js pour l'historique -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
-    /* VU-Meter custom styles */
-    .dev-bar-fill {
-      transition: height 0.05s linear;
-    }
-    .vu-bar-fill {
-      transition: height 0.05s linear;
-    }
-
-    /* Custom Tailwind config */
-    @layer utilities {
-      .text-body {
-        @apply text-gray-600 dark:text-gray-400;
-      }
-    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .sidebar-link { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; color:#64748b; font-size:0.875rem; font-weight:500; transition:all 0.15s; text-decoration:none; }
+    .sidebar-link:hover, .sidebar-link.active { background:#eff6ff; color:#2563eb; }
+    .sidebar-link svg { width:18px; height:18px; flex-shrink:0; }
+    .dot { width:9px; height:9px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .dot-green  { background:#22c55e; box-shadow:0 0 6px #22c55e88; }
+    .dot-orange { background:#f97316; box-shadow:0 0 6px #f9731688; }
+    .dot-red    { background:#ef4444; box-shadow:0 0 6px #ef444488; }
+    .dot-gray   { background:#9ca3af; }
+    .vu-bar { height:5px; border-radius:3px; transition:width 0.08s ease; }
+    .card { background:white; border:1px solid #f1f5f9; border-radius:12px; padding:14px; }
+    .section-label { font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.06em; }
+    @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .pulse { animation:pulse-ring 1.5s ease-in-out infinite; }
   </style>
 </head>
+<body class="flex h-screen overflow-hidden">
 
-<body class="bg-gray-100 overflow-hidden">
+<!-- ═══════════════════════════════════════════════════════ SIDEBAR -->
+<aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen">
 
-  <!-- ====== Sidebar ====== -->
-  <aside class="fixed left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-gray-900 duration-300 ease-linear">
-    <!-- Logo -->
-    <div class="flex items-center justify-between gap-2 px-6 py-5.5">
-      <a href="/">
-        <span class="text-xl font-semibold text-white">FM Monitor</span>
-      </a>
-    </div>
-
-    <!-- Badge Monitoring -->
-    <div class="mx-6 mt-6 mb-6 rounded bg-green-900/20 border-l-4 border-green-500 p-4">
-      <div class="flex items-center gap-2 mb-1">
-        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-        <span class="text-xs font-semibold text-green-400 uppercase tracking-wide">Monitoring actif</span>
+  <!-- Logo -->
+  <div class="p-5 border-b border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">FM</div>
+      <div>
+        <div class="text-sm font-semibold text-gray-900">FM Monitor</div>
+        <div class="text-xs text-gray-400 font-mono" id="sidebar-frequency">— MHz</div>
       </div>
-      <div class="text-sm font-mono font-bold text-white" id="sidebar-frequency">88.6 MHz</div>
     </div>
+  </div>
 
-    <!-- Menu -->
-    <nav class="px-4 pb-4">
-      <ul class="mb-6 flex flex-col gap-1.5">
-        <li>
-          <a href="/" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-white bg-gray-800">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Dashboard
-          </a>
-        </li>
-        <li>
-          <a href="/config" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Configuration
-          </a>
-        </li>
-        <li>
-          <a href="/stats" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Statistiques
-          </a>
-        </li>
-        <li>
-          <a href="/about" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            À propos
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-gray-800 hover:text-white">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
-            </svg>
-            GitHub
-          </a>
-        </li>
-      </ul>
+  <!-- Navigation -->
+  <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+    <a href="/" class="sidebar-link active">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a href="/config" class="sidebar-link">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+      Configuration
+    </a>
+    <a href="/stats" class="sidebar-link">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Statistiques
+    </a>
+    <a href="/about" class="sidebar-link">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      À propos
+    </a>
+    <a href="https://github.com/LyonelB/fm-monitor" target="_blank" class="sidebar-link">
+      <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      GitHub
+    </a>
+  </nav>
 
-      <div class="pt-6 mt-6 border-t border-gray-800">
-        <a href="/logout" class="group relative flex items-center gap-2.5 rounded px-4 py-2 font-medium text-gray-300 hover:bg-red-900 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Déconnexion
-        </a>
+  <!-- Déconnexion -->
+  <div class="p-4 border-t border-gray-100">
+    <a href="/logout" class="sidebar-link" style="color:#f87171" onmouseover="this.style.background='#fff1f2';this.style.color='#dc2626'" onmouseout="this.style.background='';this.style.color='#f87171'">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Déconnexion
+    </a>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════ MAIN -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <h1 class="text-base font-semibold text-gray-900" id="station-name-display">FM Monitor</h1>
+      <span class="text-xs text-gray-400 font-mono" id="frequency-display">—</span>
+    </div>
+    <div class="flex items-center gap-5">
+      <div class="text-right">
+        <div class="text-sm font-mono font-semibold text-gray-900" id="current-time">--:--:--</div>
+        <div class="text-xs text-gray-400" id="current-date"></div>
       </div>
-    </nav>
-  </aside>
+    </div>
+  </header>
 
-    <!-- ====== Main Content ====== -->
-    <div class="ml-72 flex flex-col" style="height:100vh">
+  <!-- Contenu scrollable -->
+  <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 
-      <!-- Header compact -->
-      <header class="flex-shrink-0 z-40 flex w-full bg-white shadow-sm">
-        <div class="flex flex-grow items-center justify-between py-3 px-4 md:px-6">
-          <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
-          <div class="text-right">
-            <div id="current-time" class="text-base font-semibold text-gray-900 font-mono"></div>
-            <div id="current-date" class="text-xs text-gray-500"></div>
+    <!-- ── Bande du haut ──────────────────────────────────────── -->
+    <div class="flex-shrink-0 grid gap-3" style="grid-template-columns: 3fr 2fr 2fr">
+
+      <!-- Bloc 1 : Logo station + RDS -->
+      <div class="card flex gap-0 p-0 overflow-hidden">
+        <!-- Logo 100×100 — toujours visible, placeholder par défaut -->
+        <div id="station-logo-container" class="flex-shrink-0 flex items-center justify-center bg-gray-50 border-r border-gray-100" style="width:100px; min-height:100px">
+          <img id="station-logo" src="" alt="Logo"
+            class="hidden object-contain p-2" style="width:100px; height:100px">
+          <div id="station-logo-placeholder"
+            class="flex flex-col items-center justify-center gap-1.5" style="width:100px; height:100px">
+            <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+            </svg>
+            <span class="text-xs font-mono text-gray-300 tracking-widest">FM</span>
           </div>
         </div>
-      </header>
-
-      <!-- Main no-scroll -->
-      <main class="flex-1 overflow-hidden p-3 flex flex-col gap-3">
-
-        <!-- ── Bande du haut : 3 blocs séparés ── -->
-        <div class="flex-shrink-0 grid grid-cols-3 gap-3">
-
-          <!-- Bloc 1 : Logo + Station / Fréquence / Email -->
-          <div class="bg-white rounded shadow p-3 flex items-center gap-4">
-            <!-- Logo grand -->
-            <div id="station-logo-container" class="hidden flex-shrink-0">
-              <img id="station-logo" src="" alt="Logo" class="h-16 w-16 object-contain rounded-lg border border-gray-100 shadow-sm">
-              <div id="station-logo-placeholder" class="hidden h-16 w-16 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
-                </svg>
-              </div>
+        <!-- Champs RDS -->
+        <div class="flex-1 min-w-0 p-3 flex flex-col justify-center">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="section-label">RDS</span>
+            <span id="rds-status-dot" class="dot dot-gray"></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <div class="text-xs text-gray-400 mb-1">PS</div>
+              <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center" id="rds-ps-display">—</div>
             </div>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-3 flex-wrap">
-                <div>
-                  <div class="text-xs text-gray-400 uppercase tracking-wide">Station</div>
-                  <div class="text-sm font-bold font-mono text-gray-900" id="station-name-display">Graffiti Radio</div>
-                </div>
-                <div class="w-px h-6 bg-gray-200"></div>
-                <div>
-                  <div class="text-xs text-gray-400 uppercase tracking-wide">Fréquence</div>
-                  <div class="text-sm font-bold font-mono text-gray-900" id="frequency-display">88.6 MHz</div>
-                </div>
-                <div class="w-px h-6 bg-gray-200"></div>
-                <div class="min-w-0">
-                  <div class="text-xs text-gray-400 uppercase tracking-wide">Email alertes</div>
-                  <div class="text-xs font-mono text-gray-600 truncate" id="email-display">—</div>
-                </div>
-              </div>
+            <div>
+              <div class="text-xs text-gray-400 mb-1">RT</div>
+              <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center truncate" id="rds-rt-display">—</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-400 mb-1">PI</div>
+              <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center" id="rds-pi-display">—</div>
             </div>
           </div>
-
-          <!-- Bloc 2 : Uptime / Alertes -->
-          <div class="bg-white rounded shadow p-3 flex gap-4 items-center justify-center">
-            <div class="text-center flex-1">
-              <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Uptime</div>
-              <div class="text-xl font-bold font-mono text-gray-900" id="uptime-display">0h 0m</div>
-            </div>
-            <div class="w-px h-10 bg-gray-100"></div>
-            <div class="text-center flex-1">
-              <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Alertes</div>
-              <div class="text-xl font-bold font-mono text-gray-900" id="alerts-display">0</div>
-            </div>
-          </div>
-
-          <!-- Bloc 3 : Modulation / Signal -->
-          <div class="bg-white rounded shadow p-3 flex flex-col justify-center gap-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-400 uppercase tracking-wide">Modulation</span>
-              <span class="text-sm font-bold text-green-600 inline-block w-16 text-right" id="modulation-display">Active</span>
-            </div>
-            <div class="w-full h-px bg-gray-100"></div>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-400 uppercase tracking-wide">Signal</span>
-              <span class="text-sm font-bold text-green-600 inline-block w-16 text-right" id="status-display">OK</span>
-            </div>
-          </div>
-
         </div>
+      </div>
 
-        <!-- ── Grille 2 colonnes égales ── -->
-        <div class="flex-shrink-0 grid grid-cols-2 gap-3">
+      <!-- Bloc 2 : Alertes / Email alertes -->
+      <div class="card flex gap-3 items-center justify-around">
+        <div class="text-center flex-shrink-0">
+          <div class="section-label mb-1">Alertes</div>
+          <div class="text-sm font-bold font-mono text-gray-900" id="alerts-display">0</div>
+        </div>
+        <div class="w-px h-8 bg-gray-100 flex-shrink-0"></div>
+        <div class="min-w-0 flex-1">
+          <div class="section-label mb-1">Email alertes</div>
+          <div class="text-sm font-bold font-mono text-gray-900 truncate" id="email-display">—</div>
+        </div>
+      </div>
 
-          <!-- ══ Col gauche (1/2) ══ -->
-          <div class="flex flex-col gap-3">
+      <!-- Bloc 3 : Signal / Modulation / Uptime -->
+      <div class="card flex gap-3 items-center justify-around">
+        <div class="text-center flex-1">
+          <div class="section-label mb-1">Signal</div>
+          <div class="text-sm font-bold font-mono text-green-600" id="status-display">OK</div>
+        </div>
+        <div class="w-px h-8 bg-gray-100"></div>
+        <div class="text-center flex-1">
+          <div class="section-label mb-1">Modulation</div>
+          <div class="text-sm font-bold font-mono text-green-600" id="modulation-display">Active</div>
+        </div>
+        <div class="w-px h-8 bg-gray-100"></div>
+        <div class="text-center flex-1">
+          <div class="section-label mb-1">Uptime</div>
+          <div class="text-sm font-bold font-mono text-gray-900" id="uptime-display">0h 0m</div>
+        </div>
+      </div>
 
-            <!-- VU-Mètre + Player -->
-            <div class="bg-white rounded shadow p-4">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">VU-Mètre audio</span>
-                <span class="text-sm font-bold font-mono text-gray-900" id="vu-meter-value-main">-100.00 dB</span>
-              </div>
-              <div class="h-2 rounded bg-gray-100 overflow-hidden mb-1">
-                <div id="vu-meter-bar-main" class="h-full w-0 rounded transition-all duration-75" style="background:#10b981"></div>
-              </div>
-              <div class="flex justify-between text-xs text-gray-400 font-mono mb-3">
-                <span>-100</span><span>-80</span><span>-60</span><span>-40</span><span>-20</span><span>0 dB</span>
-              </div>
-              <div class="border-t border-gray-100 mb-3"></div>
-              <!-- Player -->
-              <div class="flex items-center gap-3">
-                <button id="rec-btn" onclick="toggleRecord()"
-                  class="w-10 h-10 rounded-full border-2 border-gray-300 bg-white hover:border-red-500 hover:text-red-500 transition flex items-center justify-center text-gray-500 flex-shrink-0">
-                  <span id="rec-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                </button>
-                <button id="play-button" class="w-10 h-10 rounded-full border-2 border-gray-300 bg-white hover:border-blue-600 hover:text-blue-600 transition flex items-center justify-center flex-shrink-0">
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                  <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                  </svg>
-                  <input type="range" id="volume-slider" min="0" max="100" value="50" class="w-20 h-1 bg-gray-200 rounded appearance-none cursor-pointer">
-                  <span id="volume-value" class="text-xs text-gray-500 w-7">50%</span>
-                  <a href="/stream.mp3" target="_blank" class="text-xs text-blue-600 hover:underline shrink-0">Externe</a>
-                </div>
-              </div>
-              <div id="rec-progress-bar" class="hidden mt-2">
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                  <span id="rec-timer">00:00</span>
-                  <span id="rec-size">0 Mo / 50 Mo</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-1">
-                  <div id="rec-progress" class="bg-red-500 h-1 rounded-full" style="width:0%"></div>
-                </div>
-              </div>
-              <audio id="audio-player" preload="none"></audio>
-            </div>
+    </div><!-- /top row -->
 
-            <!-- RDS -->
-            <div class="bg-white rounded shadow p-4">
-              <div class="flex items-center gap-1.5 mb-3">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">RDS</span>
-                <span id="rds-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-300"></span>
-              </div>
-              <div class="grid grid-cols-3 gap-2">
-                <div>
-                  <div class="text-xs text-gray-400 uppercase mb-1">PS</div>
-                  <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-100 p-2 rounded text-center border border-gray-200" id="rds-ps-display">-</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400 uppercase mb-1">RT</div>
-                  <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-100 p-2 rounded text-center border border-gray-200 truncate" id="rds-rt-display">-</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400 uppercase mb-1">PI</div>
-                  <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-100 p-2 rounded text-center border border-gray-200" id="rds-pi-display">-</div>
-                </div>
-              </div>
-            </div>
+    <!-- ── Grille 2 colonnes ──────────────────────────────────── -->
+    <div class="flex-shrink-0 grid grid-cols-2 gap-3">
 
-            <!-- Left / Right — empilés, pleine largeur col -->
-            <div class="bg-white rounded shadow p-4">
-              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Audio stéréo L/R</div>
-              <!-- Left -->
-              <div class="mb-2">
-                <div class="flex justify-between items-baseline mb-1">
-                  <span class="text-xs font-semibold text-gray-600">Left <span class="font-normal text-gray-400">L</span></span>
-                  <span class="text-xs font-mono text-gray-600" id="mpx-val-left">— dBFS</span>
-                </div>
-                <div class="h-2 rounded bg-gray-100 overflow-hidden">
-                  <div id="mpx-bar-left" class="h-full w-0 rounded transition-all duration-150" style="background:#10b981"></div>
-                </div>
-              </div>
-              <!-- Right -->
-              <div>
-                <div class="flex justify-between items-baseline mb-1">
-                  <span class="text-xs font-semibold text-gray-600">Right <span class="font-normal text-gray-400">R</span></span>
-                  <span class="text-xs font-mono text-gray-600" id="mpx-val-right">— dBFS</span>
-                </div>
-                <div class="h-2 rounded bg-gray-100 overflow-hidden">
-                  <div id="mpx-bar-right" class="h-full w-0 rounded transition-all duration-150" style="background:#10b981"></div>
-                </div>
-              </div>
-              <div class="flex justify-between text-xs text-gray-400 font-mono mt-1">
-                <span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span>
-              </div>
-            </div>
+      <!-- ══ Col gauche ══ -->
+      <div class="flex flex-col gap-3">
 
-          </div><!-- /col gauche -->
-
-          <!-- ══ Col droite (1/2) : Analyse MPX ══ -->
-          <div class="bg-white rounded shadow p-4 flex flex-col gap-3">
-
-            <!-- En-tête -->
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                Analyse MPX
-              </span>
-              <span id="mpx-badge" class="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-gray-100 text-gray-400">—</span>
-            </div>
-
-            <div class="border-t border-gray-100"></div>
-
-            <!-- Ligne 1 : Déviation | Pilote | SNR -->
-            <div class="grid grid-cols-3 gap-4">
-
-              <!-- Déviation FM -->
-              <div>
-                <div class="h-4 flex items-center mb-1">
-                  <span class="text-xs font-semibold text-gray-600">Déviation <span class="font-normal text-gray-400">FM</span></span>
-                </div>
-                <div class="h-5 flex items-baseline mb-1">
-                  <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-dev-peak">— kHz</div>
-                </div>
-                <div class="h-1.5 rounded bg-gray-100 overflow-hidden relative">
-                  <div class="absolute inset-0 flex">
-                    <div class="bg-green-400 opacity-20" style="width:80%"></div>
-                    <div class="bg-yellow-400 opacity-20" style="width:13.3%"></div>
-                    <div class="bg-red-400 opacity-20" style="width:6.7%"></div>
-                  </div>
-                  <div id="mpx-dev-bar" class="absolute top-0 left-0 h-full w-0 rounded transition-all duration-150"
-                    style="background:#22c55e"></div>
-                </div>
-                <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-                  <span>0</span><span id="mpx-dev-rms" class="text-center">—</span><span class="text-red-400">75 kHz</span>
-                </div>
-              </div>
-
-              <!-- Pilote 19 kHz -->
-              <div>
-                <div class="h-4 flex items-center mb-1">
-                  <span class="text-xs font-semibold text-gray-600">Pilote <span class="font-normal text-gray-400">19 kHz</span></span>
-                </div>
-                <div class="h-5 flex items-baseline mb-1">
-                  <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-pilot">— dBFS</div>
-                </div>
-                <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
-                  <div id="mpx-bar-pilot" class="h-full w-0 rounded bg-green-400 transition-all duration-200"></div>
-                </div>
-                <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-                  <span>-65</span><span>-20 dBFS</span>
-                </div>
-              </div>
-
-              <!-- SNR -->
-              <div>
-                <div class="h-4 flex items-center mb-1">
-                  <span class="text-xs font-semibold text-gray-600">SNR <span class="font-normal text-gray-400">signal/bruit</span></span>
-                </div>
-                <div class="h-5 flex items-baseline mb-1">
-                  <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-snr">— dB</div>
-                </div>
-                <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
-                  <div id="mpx-bar-snr" class="h-full w-0 rounded transition-all duration-200" style="background:#22c55e"></div>
-                </div>
-                <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-                  <span>0</span><span>30</span><span>60 dB</span>
-                </div>
-              </div>
-
-            </div>
-
-            <div class="border-t border-gray-100"></div>
-
-            <!-- Ligne 2 : Puissance MPX (pleine largeur) -->
-            <div>
-              <div class="mb-1.5">
-                <span class="text-xs font-semibold text-gray-600">Puissance <span class="font-normal text-gray-400">MPX</span></span>
-              </div>
-              <div class="flex justify-between items-baseline mb-1">
-                <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-power-val">— dBFS</div>
-                <div class="text-xs text-gray-400 font-mono">-50 → 0 dBFS</div>
-              </div>
-              <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
-                <div id="mpx-power-bar" class="h-full w-0 rounded bg-green-400 transition-all duration-200"></div>
-              </div>
-            </div>
-
-            <div class="border-t border-gray-100"></div>
-
-            <!-- Ligne 3 : RDS 57 kHz (pleine largeur) -->
-            <div>
-              <div class="mb-1.5">
-                <span class="text-xs font-semibold text-gray-600">RDS <span class="font-normal text-gray-400">57 kHz</span></span>
-              </div>
-              <div class="flex justify-between items-baseline mb-1">
-                <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-rds-rf">— dBFS</div>
-                <div class="text-xs text-gray-400 font-mono">-65 → -20 dBFS</div>
-              </div>
-              <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
-                <div id="mpx-bar-rds-rf" class="h-full w-0 rounded bg-green-400 transition-all duration-200"></div>
-              </div>
-            </div>
-
-            <div class="border-t border-gray-100"></div>
-
-            <!-- Ligne 4 : Stéréo 38 kHz (pleine largeur) -->
-            <div>
-              <div class="mb-1.5">
-                <span class="text-xs font-semibold text-gray-600">Stéréo <span class="font-normal text-gray-400">38 kHz</span></span>
-              </div>
-              <div class="flex justify-between items-baseline mb-1">
-                <div class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-stereo">— dBFS</div>
-                <div class="text-xs text-gray-400 font-mono">-65 → -20 dBFS</div>
-              </div>
-              <div class="h-1.5 rounded bg-gray-100 overflow-hidden">
-                <div id="mpx-bar-stereo" class="h-full w-0 rounded bg-green-400 transition-all duration-200"></div>
-              </div>
-            </div>
-
-            <div id="mpx-disabled-msg" class="hidden text-xs text-gray-400 italic text-center">Analyse MPX désactivée</div>
-
-          </div><!-- /col droite MPX -->
-        </div><!-- /grille 2 cols -->
-
-        <!-- ── Historique audio — pleine largeur ── -->
-        <div class="flex-1 bg-white rounded shadow p-4 overflow-hidden">
+        <!-- VU-Mètre + Player -->
+        <div class="card">
           <div class="flex justify-between items-center mb-2">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Niveaux audio — 30 s</span>
-            <span class="text-xs text-gray-400 font-mono" id="realtime-chart-status">En direct</span>
+            <span class="section-label">VU-Mètre audio</span>
+            <span class="text-sm font-bold font-mono text-gray-900" id="vu-meter-value-main">-100.00 dB</span>
           </div>
-          <div class="h-full pb-8">
-            <canvas id="audioChart"></canvas>
+          <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-0.5">
+            <div id="vu-meter-bar-main" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mb-3">
+            <span>-100</span><span>-80</span><span>-60</span><span>-40</span><span>-20</span><span>0 dB</span>
+          </div>
+
+          <div class="border-t border-gray-100 mb-3"></div>
+
+          <!-- Player -->
+          <div class="flex items-center gap-3">
+            <button id="rec-btn" onclick="toggleRecord()"
+              class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white hover:border-red-400 hover:text-red-500 transition flex items-center justify-center text-gray-400 flex-shrink-0">
+              <span id="rec-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-300"></span>
+            </button>
+            <button id="play-button"
+              class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white hover:border-blue-500 hover:text-blue-600 transition flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+              <input type="range" id="volume-slider" min="0" max="100" value="50" class="w-16 h-1 bg-gray-200 rounded appearance-none cursor-pointer accent-blue-500">
+              <span id="volume-value" class="text-xs text-gray-500 w-7">50%</span>
+              <a href="/stream.mp3" target="_blank" class="text-xs text-blue-500 hover:underline shrink-0">Externe</a>
+            </div>
+          </div>
+
+          <div id="rec-progress-bar" class="hidden mt-2">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+              <span id="rec-timer">00:00</span>
+              <span id="rec-size">0 Mo / 50 Mo</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1">
+              <div id="rec-progress" class="bg-red-500 h-1 rounded-full" style="width:0%"></div>
+            </div>
+          </div>
+          <audio id="audio-player" preload="none"></audio>
+        </div>
+
+        <!-- L/R stéréo -->
+        <div class="card">
+          <div class="section-label mb-3">Audio stéréo L/R</div>
+          <!-- Left -->
+          <div class="mb-2">
+            <div class="flex justify-between items-baseline mb-1">
+              <span class="text-xs font-semibold text-gray-600">Left <span class="font-normal text-gray-400">L</span></span>
+              <span class="text-xs font-mono text-gray-500" id="mpx-val-left">— dBFS</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-left" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
+            </div>
+          </div>
+          <!-- Right -->
+          <div>
+            <div class="flex justify-between items-baseline mb-1">
+              <span class="text-xs font-semibold text-gray-600">Right <span class="font-normal text-gray-400">R</span></span>
+              <span class="text-xs font-mono text-gray-500" id="mpx-val-right">— dBFS</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-right" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
+            </div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mt-1">
+            <span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span>
           </div>
         </div>
 
-      </main>
-    </div><!-- /ml-72 -->
+      </div><!-- /col gauche -->
 
+      <!-- ══ Col droite : Analyse MPX ══ -->
+      <div class="card flex flex-col gap-3">
+
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Analyse MPX
+          </span>
+          <span id="mpx-badge" class="text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-400">—</span>
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Déviation / Pilote / SNR -->
+        <div class="grid grid-cols-3 gap-3">
+
+          <!-- Déviation FM -->
+          <div class="text-center">
+            <div class="text-xs font-semibold text-gray-600 mb-1">Déviation <span class="font-normal text-gray-400">FM</span></div>
+            <div class="text-sm font-mono font-semibold text-gray-800 mb-1" id="mpx-dev-peak">— kHz</div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden relative">
+              <div class="absolute inset-0 flex">
+                <div class="bg-green-400 opacity-20" style="width:80%"></div>
+                <div class="bg-yellow-400 opacity-20" style="width:13.3%"></div>
+                <div class="bg-red-400 opacity-20" style="width:6.7%"></div>
+              </div>
+              <div id="mpx-dev-bar" class="absolute top-0 left-0 h-full w-0 rounded-full transition-all duration-150" style="background:#22c55e"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
+              <span>0</span><span id="mpx-dev-rms" class="text-center">—</span><span class="text-red-400">75</span>
+            </div>
+          </div>
+
+          <!-- Pilote 19 kHz -->
+          <div class="text-center">
+            <div class="text-xs font-semibold text-gray-600 mb-1">Pilote <span class="font-normal text-gray-400">19 kHz</span></div>
+            <div class="text-sm font-mono font-semibold text-gray-800 mb-1" id="mpx-val-pilot">— dBFS</div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-pilot" class="vu-bar w-0 bg-green-400" style="height:100%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
+              <span>-65</span><span>-20</span>
+            </div>
+          </div>
+
+          <!-- SNR -->
+          <div class="text-center">
+            <div class="text-xs font-semibold text-gray-600 mb-1">SNR <span class="font-normal text-gray-400">s/b</span></div>
+            <div class="text-sm font-mono font-semibold text-gray-800 mb-1" id="mpx-val-snr">— dB</div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-snr" class="vu-bar w-0" style="background:#22c55e; height:100%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
+              <span>0</span><span>30</span><span>60</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Puissance MPX -->
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-xs font-semibold text-gray-600">Puissance <span class="font-normal text-gray-400">MPX</span></span>
+            <span class="text-sm font-mono font-semibold text-gray-800" id="mpx-power-val">— dBFS</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div id="mpx-power-bar" class="vu-bar w-0 bg-green-400" style="height:100%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5"><span>-50</span><span>0 dBFS</span></div>
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- RDS 57 kHz -->
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-xs font-semibold text-gray-600">RDS <span class="font-normal text-gray-400">57 kHz</span></span>
+            <span class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-rds-rf">— dBFS</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div id="mpx-bar-rds-rf" class="vu-bar w-0 bg-green-400" style="height:100%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5"><span>-65</span><span>-20 dBFS</span></div>
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Stéréo 38 kHz -->
+        <div>
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-xs font-semibold text-gray-600">Stéréo <span class="font-normal text-gray-400">38 kHz</span></span>
+            <span class="text-sm font-mono font-semibold text-gray-800" id="mpx-val-stereo">— dBFS</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div id="mpx-bar-stereo" class="vu-bar w-0 bg-green-400" style="height:100%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5"><span>-65</span><span>-20 dBFS</span></div>
+        </div>
+
+        <div id="mpx-disabled-msg" class="hidden text-xs text-gray-400 italic text-center">Analyse MPX désactivée</div>
+
+      </div><!-- /col droite MPX -->
+    </div><!-- /grille 2 cols -->
+
+    <!-- ── Historique audio — pleine largeur ─────────────────── -->
+    <div class="card flex-1" style="min-height:140px">
+      <div class="flex justify-between items-center mb-2">
+        <span class="section-label">Niveaux audio — 30 s</span>
+        <span class="text-xs text-gray-400 font-mono" id="realtime-chart-status">En direct</span>
+      </div>
+      <div style="height:calc(100% - 28px)">
+        <canvas id="audioChart"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /scroll area -->
+</main>
 
 <script>
     // Fonction pour récupérer le token CSRF
@@ -438,7 +376,7 @@
     }
 
     // =============================================
-    // VU-MÈTRE AUDIO (barre fine, style L/R)
+    // VU-MÈTRE AUDIO
     // =============================================
     function updateVUMeter(levelValue) {
         const value = Math.max(0, Math.min(100, levelValue));
@@ -454,36 +392,31 @@
     // =============================================
     // PLAYER AUDIO
     // =============================================
-    const playButton = document.getElementById('play-button');
+    const playButton  = document.getElementById('play-button');
     const audioPlayer = document.getElementById('audio-player');
     const volumeSlider = document.getElementById('volume-slider');
-    const volumeValue = document.getElementById('volume-value');
+    const volumeValue  = document.getElementById('volume-value');
     let isPlaying = false;
 
     playButton.addEventListener('click', () => {
-        // Ne rien faire si le bouton est désactivé
-        if (playButton.disabled) {
-            return;
-        }
-
+        if (playButton.disabled) return;
         if (!isPlaying) {
             audioPlayer.src = '/stream.mp3?t=' + Date.now();
             audioPlayer.play();
             isPlaying = true;
-            playButton.innerHTML = '<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>';
-            playButton.classList.add('border-blue-600', 'text-blue-600', 'bg-blue-50');
+            playButton.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>';
+            playButton.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-50');
         } else {
             audioPlayer.pause();
             audioPlayer.src = '';
             isPlaying = false;
-            playButton.innerHTML = '<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-            playButton.classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-50');
+            playButton.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            playButton.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-50');
         }
     });
 
     volumeSlider.addEventListener('input', (e) => {
-        const volume = e.target.value / 100;
-        audioPlayer.volume = volume;
+        audioPlayer.volume = e.target.value / 100;
         volumeValue.textContent = e.target.value + '%';
     });
 
@@ -494,14 +427,10 @@
         try {
             const response = await fetch('/api/config/full', {credentials: 'include'});
             const config = await response.json();
-            document.getElementById('station-name-display').textContent = config.station?.name || 'Graffiti Radio';
-            document.getElementById('frequency-display').textContent = config.rtl_sdr?.frequency || '88.6M';
-
-            // Mettre à jour le badge dans la sidebar
+            document.getElementById('station-name-display').textContent = config.station?.name || 'FM Monitor';
             const freq = config.rtl_sdr?.frequency || '88.6M';
-            const freqMhz = freq.replace('M', ' MHz');
-            document.getElementById('sidebar-frequency').textContent = freqMhz;
-
+            document.getElementById('frequency-display').textContent = freq.replace('M', ' MHz');
+            document.getElementById('sidebar-frequency').textContent  = freq.replace('M', ' MHz');
             let emailDisplay = 'Non configuré';
             if (config.email?.recipient_emails) {
                 const recip = config.email.recipient_emails;
@@ -521,89 +450,74 @@
             const level = stats.current_level || -100;
             const levelPercent = Math.max(0, Math.min(100, level + 100));
 
-            // Toujours mettre à jour "Niveau RMS"
-
             // Modulation
             const modEl = document.getElementById('modulation-display');
             if (!stats.signal_ok) {
                 modEl.textContent = '—';
-                modEl.className = 'text-sm font-bold inline-block w-16 text-right text-gray-400';
+                modEl.className = 'text-sm font-bold font-mono text-gray-400';
             } else if (stats.modulation_ok) {
                 modEl.textContent = 'Active';
-                modEl.className = 'text-sm font-bold inline-block w-16 text-right text-green-600';
+                modEl.className = 'text-sm font-bold font-mono text-green-600';
             } else {
                 modEl.textContent = 'Absente';
-                modEl.className = 'text-sm font-bold inline-block w-16 text-right text-orange-500';
+                modEl.className = 'text-sm font-bold font-mono text-orange-500';
             }
 
             updateVUMeter(levelPercent);
 
             const uptimeSeconds = stats.uptime || 0;
-            const hours = Math.floor(uptimeSeconds / 3600);
+            const hours   = Math.floor(uptimeSeconds / 3600);
             const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-            document.getElementById('uptime-display').textContent = hours + 'h ' + minutes + 'm';
-            document.getElementById('alerts-display').textContent = stats.alerts_sent || 0;
-	    const statusEl = document.getElementById('status-display');
-	    if (stats.signal_ok) {
-	        statusEl.textContent = 'OK';
-	        statusEl.className = 'text-sm font-bold inline-block w-16 text-right text-green-600';
-	    } else {
-	        statusEl.textContent = 'Perdu';
-	        statusEl.className = 'text-sm font-bold inline-block w-16 text-right text-orange-500';
-	    }
+            document.getElementById('uptime-display').textContent  = hours + 'h ' + minutes + 'm';
+            document.getElementById('alerts-display').textContent  = stats.alerts_sent || 0;
 
-            if (stats.ps && stats.ps !== '-') {
-                document.getElementById('rds-ps-display').textContent = stats.ps;
+            const statusEl = document.getElementById('status-display');
+            if (stats.signal_ok) {
+                statusEl.textContent = 'OK';
+                statusEl.className = 'text-sm font-bold font-mono text-green-600';
+            } else {
+                statusEl.textContent = 'Perdu';
+                statusEl.className = 'text-sm font-bold font-mono text-orange-500';
             }
-            if (stats.rt && stats.rt !== '-') {
-                document.getElementById('rds-rt-display').textContent = stats.rt;
-            }
-            if (stats.pi) {
-                document.getElementById('rds-pi-display').textContent = stats.pi;
-            }
+
+            if (stats.ps && stats.ps !== '-') document.getElementById('rds-ps-display').textContent = stats.ps;
+            if (stats.rt && stats.rt !== '-') document.getElementById('rds-rt-display').textContent = stats.rt;
+            if (stats.pi)                     document.getElementById('rds-pi-display').textContent = stats.pi;
 
             // Voyant RDS
             const rdsDot = document.getElementById('rds-status-dot');
             if (!stats.rds_ever_received) {
-                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-gray-300';
+                rdsDot.className = 'dot dot-gray';
                 rdsDot.title = 'RDS non reçu';
             } else if (stats.rds_ok) {
-                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-green-500';
+                rdsDot.className = 'dot dot-green pulse';
                 rdsDot.title = 'RDS OK';
             } else {
-                rdsDot.className = 'inline-block w-3 h-3 rounded-full bg-red-500';
+                rdsDot.className = 'dot dot-red';
                 rdsDot.title = 'RDS absent';
             }
 
-            // Logo station (indépendant du service RDS)
-            const logoImg = document.getElementById('station-logo');
-            const logoContainer = document.getElementById('station-logo-container');
+            // Logo station — container toujours visible, placeholder par défaut
+            const logoImg         = document.getElementById('station-logo');
             const logoPlaceholder = document.getElementById('station-logo-placeholder');
             if (stats.station_logo) {
                 if (logoImg && logoImg.getAttribute('data-src') !== stats.station_logo) {
                     logoImg.setAttribute('data-src', stats.station_logo);
                     logoImg.src = stats.station_logo;
                     logoImg.onerror = () => {
-                        // URL cassée : effacer data-src pour permettre une tentative ultérieure
                         logoImg.removeAttribute('data-src');
                         logoImg.src = '';
                         logoImg.classList.add('hidden');
                         if (logoPlaceholder) logoPlaceholder.classList.remove('hidden');
                     };
                     logoImg.onload = () => {
-                        logoContainer.classList.remove('hidden');
                         logoImg.classList.remove('hidden');
                         if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
                     };
                 }
-            } else if (stats.station_logo === null && stats.ps && stats.ps !== '-') {
-                // PS reçu mais pas de logo trouvé → placeholder
-                if (logoContainer) logoContainer.classList.remove('hidden');
-                if (logoImg) logoImg.classList.add('hidden');
-                if (logoPlaceholder) logoPlaceholder.classList.remove('hidden');
             } else {
-                // Pas encore de PS → cacher tout
-                if (logoContainer) logoContainer.classList.add('hidden');
+                if (logoImg)         logoImg.classList.add('hidden');
+                if (logoPlaceholder) logoPlaceholder.classList.remove('hidden');
             }
 
         } catch (error) {
@@ -612,16 +526,13 @@
     }
 
     // =============================================
-    // HISTORIQUE AUDIO
-    // =============================================
-    // =============================================
     // GRAPHIQUE TEMPS RÉEL (30 secondes)
     // =============================================
-    const REALTIME_WINDOW = 300;      // 30s × 10 pts/sec
-    const REALTIME_INTERVAL = 100;    // 10 Hz
+    const REALTIME_WINDOW   = 300;
+    const REALTIME_INTERVAL = 100;
     let audioChart = null;
     let realtimeLabels = [];
-    let realtimeData = [];
+    let realtimeData   = [];
     let lastRealtimePush = 0;
 
     function initRealtimeChart() {
@@ -634,8 +545,8 @@
                     label: 'Niveau audio (dBFS)',
                     data: realtimeData,
                     borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    borderWidth: 2,
+                    backgroundColor: 'rgba(59,130,246,0.08)',
+                    borderWidth: 1.5,
                     pointRadius: 0,
                     tension: 0.3,
                     fill: true
@@ -645,18 +556,15 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
-                plugins: {
-                    legend: { display: false }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
-                        // Pas de min/max fixe — calculé dynamiquement dans pushRealtimeLevel
-                        title: { display: true, text: 'dBFS' },
-                        ticks: { stepSize: 10 },
-                        grid: { color: 'rgba(0,0,0,0.05)' }
+                        title: { display: true, text: 'dBFS', font: { size: 10 } },
+                        ticks: { stepSize: 10, font: { size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.04)' }
                     },
                     x: {
-                        ticks: { maxTicksLimit: 6, maxRotation: 0 },
+                        ticks: { maxTicksLimit: 6, maxRotation: 0, font: { size: 10 } },
                         grid: { display: false }
                     }
                 }
@@ -665,45 +573,25 @@
     }
 
     function pushRealtimeLevel(levelDb) {
-        // Throttle strict : 1 point maximum par seconde
         const now = Date.now();
         if (now - lastRealtimePush < REALTIME_INTERVAL) return;
         lastRealtimePush = now;
-
-        const label = new Date(now).toLocaleTimeString('fr-FR', {
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
-
+        const label = new Date(now).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
         realtimeLabels.push(label);
         realtimeData.push(Math.round(levelDb * 10) / 10);
-
-        if (realtimeLabels.length > REALTIME_WINDOW) {
-            realtimeLabels.shift();
-            realtimeData.shift();
-        }
-
+        if (realtimeLabels.length > REALTIME_WINDOW) { realtimeLabels.shift(); realtimeData.shift(); }
         if (audioChart && realtimeData.length > 0) {
-            // Adapter l'axe Y dynamiquement avec une marge de 5 dB
-            const dMin = Math.min(...realtimeData);
-            const dMax = Math.max(...realtimeData);
-            const margin = 5;
+            const dMin = Math.min(...realtimeData), dMax = Math.max(...realtimeData), margin = 5;
             audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
             audioChart.options.scales.y.max = Math.min(0, Math.ceil((dMax + margin) / 10) * 10);
             audioChart.update('none');
         }
     }
 
-    // Fonctions compatibilité (conservées pour ne pas casser le reste)
     let historyData = [];
     function loadAudioHistory() {}
     function updateHistoryChart() {}
-
-
-    // =============================================
-    // VU-MÈTRE DÉVIATION FM — supprimé (barre fine désormais)
-    // updateDevMeter est conservé comme no-op pour compatibilité
-    // =============================================
-    function updateDevMeter(deviationKhz) { /* barre fine gérée par updateMPX */ }
+    function updateDevMeter(deviationKhz) {}
 
     // =============================================
     // ANALYSE MPX
@@ -715,35 +603,21 @@
 
       if (!enabled) {
         if (disMsg) disMsg.classList.remove('hidden');
-        if (badge) { badge.textContent = 'OFF'; badge.className = 'text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-gray-100 text-gray-400'; }
+        if (badge) { badge.textContent = 'OFF'; badge.className = 'text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-400'; }
         return;
       }
       if (disMsg) disMsg.classList.add('hidden');
 
-      // ── Déviation ──────────────────────────────────────────
       const devPeak = stats.deviation_peak ?? 0;
       const devRms  = stats.deviation_rms  ?? 0;
       const devPct  = Math.min((devPeak / 75) * 100, 100).toFixed(1);
-
       const devBar  = document.getElementById('mpx-dev-bar');
       const devEl   = document.getElementById('mpx-dev-peak');
       const rmsEl   = document.getElementById('mpx-dev-rms');
-      if (devBar) {
-        devBar.style.width = devPct + '%';
-        devBar.style.background = devPeak > 70 ? '#ef4444' : devPeak > 60 ? '#f59e0b' : '#22c55e';
-      }
-      updateDevMeter(devPeak);
-      if (devEl)  devEl.textContent  = devPeak.toFixed(1) + ' kHz';
-      if (rmsEl)  rmsEl.textContent  = devRms.toFixed(1) + ' kHz';
+      if (devBar) { devBar.style.width = devPct + '%'; devBar.style.background = devPeak > 70 ? '#ef4444' : devPeak > 60 ? '#f59e0b' : '#22c55e'; }
+      if (devEl)  { devEl.textContent = devPeak.toFixed(1) + ' kHz'; devEl.className = devPeak > 75 ? 'text-sm font-mono font-semibold text-red-600' : devPeak > 70 ? 'text-sm font-mono font-semibold text-yellow-500' : 'text-sm font-mono font-semibold text-gray-800'; }
+      if (rmsEl)  rmsEl.textContent = devRms.toFixed(1) + ' kHz';
 
-      // Couleur valeur peak selon zone
-      if (devEl) {
-        if (devPeak > 75)      devEl.className = 'text-sm font-mono font-semibold text-red-600';
-        else if (devPeak > 70) devEl.className = 'text-sm font-mono font-semibold text-yellow-500';
-        else                   devEl.className = 'text-sm font-mono font-semibold text-gray-800';
-      }
-
-      // ── Puissance MPX ──────────────────────────────────────
       const power    = stats.mpx_power ?? -100;
       const powerPct = Math.max(0, Math.min(100, (power + 50) / 50 * 100));
       const powerBar = document.getElementById('mpx-power-bar');
@@ -751,62 +625,40 @@
       if (powerBar) powerBar.style.width = powerPct + '%';
       if (powerVal) powerVal.textContent  = power.toFixed(1) + ' dBFS';
 
-      // ── Sous-porteuses ─────────────────────────────────────
       _updateSC('pilot',  stats.pilot_level,  stats.pilot_present);
       _updateSC('stereo', stats.stereo_level, stats.stereo_present);
       _updateSC('rds-rf', stats.rds_level,    stats.rds_rf_present);
+      _updateLR('left',   stats.level_left);
+      _updateLR('right',  stats.level_right);
 
-      // ── Left / Right ───────────────────────────────────────────
-      _updateLR('left',  stats.level_left);
-      _updateLR('right', stats.level_right);
-
-      // ── SNR ────────────────────────────────────────────────────
       const snr    = stats.snr ?? 0;
       const snrPct = Math.min((snr / 60) * 100, 100);
       const snrVal = document.getElementById('mpx-val-snr');
-      if (snrVal) snrVal.textContent = snr.toFixed(1) + ' dB';
       const snrBar = document.getElementById('mpx-bar-snr');
-      if (snrBar) {
-        snrBar.style.width = snrPct + '%';
-        snrBar.style.background = snr >= 40 ? '#22c55e' : snr >= 25 ? '#f59e0b' : '#ef4444';
-      }
-      updateBarMeter(snrBars, snr / 60);
+      if (snrVal) snrVal.textContent = snr.toFixed(1) + ' dB';
+      if (snrBar) { snrBar.style.width = snrPct + '%'; snrBar.style.background = snr >= 40 ? '#22c55e' : snr >= 25 ? '#f59e0b' : '#ef4444'; }
 
-      // ── Badge global ───────────────────────────────────────
-      const overDev = devPeak > 75;
-      const badgeCls = 'text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full ';
-      if (overDev) {
-        badge.textContent = '⚠ Sur-déviation';
-        badge.className   = badgeCls + 'bg-red-100 text-red-600';
+      const badgeCls = 'text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ';
+      if (devPeak > 75) {
+        badge.textContent = '⚠ Sur-déviation'; badge.className = badgeCls + 'bg-red-100 text-red-600';
       } else if (stats.pilot_present && stats.stereo_present) {
-        badge.textContent = 'Stéréo';
-        badge.className   = badgeCls + 'bg-green-100 text-green-700';
+        badge.textContent = 'Stéréo'; badge.className = badgeCls + 'bg-green-100 text-green-700';
       } else if (stats.pilot_present) {
-        badge.textContent = 'Pilote OK';
-        badge.className   = badgeCls + 'bg-blue-100 text-blue-600';
+        badge.textContent = 'Pilote OK'; badge.className = badgeCls + 'bg-blue-100 text-blue-600';
       } else if (stats.modulation_active) {
-        badge.textContent = 'Mono';
-        badge.className   = badgeCls + 'bg-yellow-100 text-yellow-600';
+        badge.textContent = 'Mono'; badge.className = badgeCls + 'bg-yellow-100 text-yellow-600';
       } else {
-        badge.textContent = '—';
-        badge.className   = badgeCls + 'bg-gray-100 text-gray-400';
+        badge.textContent = '—'; badge.className = badgeCls + 'bg-gray-100 text-gray-400';
       }
     }
 
     function _updateSC(name, level, present) {
       const db  = level ?? -100;
-      // Barre : -65 dBFS → 0%, -20 dBFS → 100%
       const pct = Math.max(0, Math.min(100, (db + 65) / 45 * 100));
-      const dot  = document.getElementById('mpx-dot-'   + name);
-      const val  = document.getElementById('mpx-val-'   + name);
-      const bar  = document.getElementById('mpx-bar-'   + name);
+      const val = document.getElementById('mpx-val-' + name);
+      const bar = document.getElementById('mpx-bar-' + name);
       if (val) val.textContent = db.toFixed(1) + ' dBFS';
-      if (bar) bar.style.width = pct + '%';
-      if (bar) bar.style.background = present ? '#22c55e' : '#d1d5db';
-      if (dot) {
-        dot.style.background  = present ? '#22c55e' : '#d1d5db';
-        dot.style.boxShadow   = present ? '0 0 6px #22c55e' : 'none';
-      }
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = present ? '#22c55e' : '#d1d5db'; }
     }
 
     function _updateLR(side, level) {
@@ -815,14 +667,11 @@
       const val = document.getElementById('mpx-val-' + side);
       const bar = document.getElementById('mpx-bar-' + side);
       if (val) val.textContent = db.toFixed(1) + ' dBFS';
-      if (bar) {
-        bar.style.width = pct + '%';
-        bar.style.background = db > -3 ? '#ef4444' : db > -10 ? '#f59e0b' : '#10b981';
-      }
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = db > -3 ? '#ef4444' : db > -10 ? '#f59e0b' : '#10b981'; }
     }
 
-    // updateBarMeter conservé comme no-op (plus de conteneurs 100 barres)
     function updateBarMeter(bars, pct) {}
+
     const lBars = [], rBars = [], snrBars = [];
 
     // =============================================
@@ -834,76 +683,47 @@
         eventSource.onmessage = (event) => {
             try {
                 const stats = JSON.parse(event.data);
-
                 const level = stats.current_level || -100;
                 const levelPercent = Math.max(0, Math.min(100, level + 100));
 
-                // Toujours mettre à jour "Niveau RMS"
-
-                // Modulation
                 const modEl = document.getElementById('modulation-display');
                 if (!stats.signal_ok) {
-                    modEl.textContent = '—';
-                    modEl.className = 'text-sm font-bold inline-block w-16 text-right text-gray-400';
+                    modEl.textContent = '—'; modEl.className = 'text-sm font-bold font-mono text-gray-400';
                 } else if (stats.modulation_ok) {
-                    modEl.textContent = 'Active';
-                    modEl.className = 'text-sm font-bold inline-block w-16 text-right text-green-600';
+                    modEl.textContent = 'Active'; modEl.className = 'text-sm font-bold font-mono text-green-600';
                 } else {
-                    modEl.textContent = 'Absente';
-                    modEl.className = 'text-sm font-bold inline-block w-16 text-right text-orange-500';
+                    modEl.textContent = 'Absente'; modEl.className = 'text-sm font-bold font-mono text-orange-500';
                 }
 
                 updateVUMeter(levelPercent);
-
-                // Graphique temps réel
                 pushRealtimeLevel(level);
-
-                // Analyse MPX
                 updateMPX(stats);
 
-                if (stats.ps && stats.ps !== '-') {
-                        document.getElementById('rds-ps-display').textContent = stats.ps;
-                    }
-                    if (stats.rt && stats.rt !== '-') {
-                        document.getElementById('rds-rt-display').textContent = stats.rt;
-                    }
+                if (stats.ps && stats.ps !== '-') document.getElementById('rds-ps-display').textContent = stats.ps;
+                if (stats.rt && stats.rt !== '-') document.getElementById('rds-rt-display').textContent = stats.rt;
 
-                    // Voyant RDS
-                    const rdsDotSSE = document.getElementById('rds-status-dot');
-                    if (!stats.rds_ever_received) {
-                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-gray-300';
-                        rdsDotSSE.title = 'RDS non reçu';
-                    } else if (stats.rds_ok) {
-                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-green-500';
-                        rdsDotSSE.title = 'RDS OK';
-                    } else {
-                        rdsDotSSE.className = 'inline-block w-3 h-3 rounded-full bg-red-500';
-                        rdsDotSSE.title = 'RDS absent';
-                    }
-
-            } catch(e) {
-                console.error('Erreur parsing SSE:', e);
-            }
+                const rdsDotSSE = document.getElementById('rds-status-dot');
+                if (!stats.rds_ever_received) {
+                    rdsDotSSE.className = 'dot dot-gray'; rdsDotSSE.title = 'RDS non reçu';
+                } else if (stats.rds_ok) {
+                    rdsDotSSE.className = 'dot dot-green pulse'; rdsDotSSE.title = 'RDS OK';
+                } else {
+                    rdsDotSSE.className = 'dot dot-red'; rdsDotSSE.title = 'RDS absent';
+                }
+            } catch(e) { console.error('Erreur parsing SSE:', e); }
         };
 
-        eventSource.onerror = () => {
-            eventSource.close();
-            setTimeout(connectSSE, 5000);
-        };
+        eventSource.onerror = () => { eventSource.close(); setTimeout(connectSSE, 5000); };
     }
 
     // =============================================
     // HEURE ACTUELLE
     // =============================================
     function updateTime() {
-        const now = new Date();
-        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const date = now.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        document.getElementById('current-time').textContent = time;
-        document.getElementById('current-date').textContent = date;
+        const now  = new Date();
+        document.getElementById('current-time').textContent = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        document.getElementById('current-date').textContent = now.toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
-
 
     // Appels initiaux
     updateTime();
@@ -911,17 +731,16 @@
     updateStats();
     initRealtimeChart();
     connectSSE();
-
-    setInterval(updateTime, 1000);
+    setInterval(updateTime,   1000);
     setInterval(updateStats, 10000);
+
     // =============================================
     // ENREGISTREMENT AUDIO
     // =============================================
-    let isRecording = false;
+    let isRecording  = false;
     let recStartTime = null;
-    let recInterval = null;
+    let recInterval  = null;
 
-    // Rafraîchit l'UI au retour sur l'onglet
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && isRecording) {
             updateRecStatus();
@@ -931,81 +750,64 @@
     });
 
     async function toggleRecord() {
-        if (!isRecording) {
-            await startRecord();
-        } else {
-            await stopRecord();
-        }
+        if (!isRecording) { await startRecord(); } else { await stopRecord(); }
     }
 
     async function startRecord() {
         try {
-            const res = await fetch('/api/record/start', { method: 'POST', headers: {'X-CSRFToken': await getCsrfToken()} });
+            const res  = await fetch('/api/record/start', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()} });
             const data = await res.json();
             if (data.status === 'ok') {
-                isRecording = true;
+                isRecording  = true;
                 recStartTime = Date.now();
-                document.getElementById('rec-btn').className = 'w-14 h-14 rounded-full border-2 border-red-500 bg-white text-red-500 transition flex items-center justify-center';
-                document.getElementById('rec-dot').className = 'inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse';
+                document.getElementById('rec-btn').className  = 'w-9 h-9 rounded-full border-2 border-red-500 bg-white text-red-500 transition flex items-center justify-center';
+                document.getElementById('rec-dot').className  = 'inline-block w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
                 document.getElementById('rec-progress-bar').classList.remove('hidden');
                 recInterval = setInterval(updateRecStatus, 2000);
-            } else {
-                alert('Erreur : ' + data.message);
-            }
+            } else { alert('Erreur : ' + data.message); }
         } catch(e) { console.error(e); }
     }
 
     async function stopRecord() {
         clearInterval(recInterval);
         try {
-            const res = await fetch('/api/record/stop', { method: 'POST', headers: {'X-CSRFToken': await getCsrfToken()} });
+            const res  = await fetch('/api/record/stop', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()} });
             const data = await res.json();
-            if (data.status === 'ok') {
-                resetRecBtn();
-                window.location.href = '/api/record/download';
-            } else {
-                alert('Erreur : ' + data.message);
-                resetRecBtn();
-            }
+            if (data.status === 'ok') { resetRecBtn(); window.location.href = '/api/record/download'; }
+            else { alert('Erreur : ' + data.message); resetRecBtn(); }
         } catch(e) { console.error(e); resetRecBtn(); }
     }
 
     async function updateRecStatus() {
         try {
-            const res = await fetch('/api/record/status');
+            const res  = await fetch('/api/record/status');
             const data = await res.json();
-            if (!data.recording) {
-                clearInterval(recInterval);
-                resetRecBtn();
-                window.location.href = '/api/record/download';
-                return;
-            }
-            const pct = Math.min(100, (data.size / data.max) * 100);
-            const mo = (data.size / 1024 / 1024).toFixed(1);
+            if (!data.recording) { clearInterval(recInterval); resetRecBtn(); window.location.href = '/api/record/download'; return; }
+            const pct     = Math.min(100, (data.size / data.max) * 100);
+            const mo      = (data.size / 1024 / 1024).toFixed(1);
             const elapsed = recStartTime ? Math.floor((Date.now() - recStartTime) / 1000) : 0;
             const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const ss = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('rec-timer').textContent = mm + ':' + ss;
-            document.getElementById('rec-size').textContent = mo + ' Mo / 50 Mo';
+            document.getElementById('rec-timer').textContent   = mm + ':' + ss;
+            document.getElementById('rec-size').textContent    = mo + ' Mo / 50 Mo';
             document.getElementById('rec-progress').style.width = pct + '%';
         } catch(e) { console.error(e); }
     }
 
     function resetRecBtn() {
-        isRecording = false;
+        isRecording  = false;
         recStartTime = null;
-        document.getElementById('rec-btn').className = 'w-14 h-14 rounded-full border-2 border-gray-300 bg-white hover:border-red-500 hover:text-red-500 transition flex items-center justify-center text-gray-500';
-        document.getElementById('rec-dot').className = 'inline-block w-3 h-3 rounded-full bg-gray-400';
+        document.getElementById('rec-btn').className = 'w-9 h-9 rounded-full border-2 border-gray-200 bg-white hover:border-red-400 hover:text-red-500 transition flex items-center justify-center text-gray-400';
+        document.getElementById('rec-dot').className = 'inline-block w-2.5 h-2.5 rounded-full bg-gray-300';
         document.getElementById('rec-progress-bar').classList.add('hidden');
         document.getElementById('rec-progress').style.width = '0%';
     }
 
     async function getCsrfToken() {
-        const res = await fetch('/api/csrf-token');
+        const res  = await fetch('/api/csrf-token');
         const data = await res.json();
         return data.csrf_token;
     }
-
-  </script>
+</script>
 </body>
-
+</html>

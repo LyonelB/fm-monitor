@@ -794,12 +794,14 @@ class FMMonitor:
                 pi = self.stats.get('pi', '').strip().upper()
                 if not pi or pi == '-':
                     continue
+                ps_current = self.stats.get('ps', '').strip()
                 lookup = self._get_rds_lookup(force_refresh=True)
                 if not lookup:
                     continue
-                station = lookup.get_by_pi(pi)
+                # Recherche exacte PI+PS pour gérer les PI partagés (ex: RCF)
+                station = lookup.get(pi=pi, ps=ps_current) if ps_current else lookup.get_by_pi(pi)
                 if not station:
-                    logger.info(f"Watcher: PI {pi} non trouve dans la base")
+                    logger.info(f"Watcher: PI {pi} / PS '{ps_current}' non trouve dans la base")
                     continue
                 new_logo = station.get('logo_url')
                 current_logo = self.stats.get('station_logo')
@@ -845,19 +847,12 @@ class FMMonitor:
                 return
 
             # Priorite 1 : rds-station-db
-            # force_refresh=True : recharge depuis GitHub pour avoir le logo à jour
+            # get(pi+ps) : correspondance exacte, gère les PI partagés (ex: RCF)
             lookup = self._get_rds_lookup(force_refresh=True)
             if lookup:
-                station = lookup.get_by_pi(pi)
+                station = lookup.get(pi=pi, ps=ps)
                 if station:
-                    # Validation croisée PI + PS
-                    db_ps = station.get('ps', '').strip().upper()
-                    if db_ps and db_ps != ps_upper:
-                        logger.warning(
-                            f"PI/PS mismatch [{pi}]: reçu PS='{ps}' "
-                            f"mais base PS='{station.get('ps')}' → logo refusé"
-                        )
-                    elif station.get('logo_url'):
+                    if station.get('logo_url'):
                         logo_url = station['logo_url']
                         logger.info(
                             f"Logo rds-station-db [{pi}/{ps}] "

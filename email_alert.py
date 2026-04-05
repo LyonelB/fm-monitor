@@ -123,6 +123,10 @@ Système de surveillance FM - RTL-SDR
             msg.attach(part2)
 
             # Envoyer l'email
+            # Mettre à jour le cooldown AVANT la tentative d'envoi
+            # pour éviter la boucle infinie en cas d'échec SMTP
+            self.last_alert_time = datetime.now()
+
             with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
                 if self.config['use_tls']:
                     server.starttls()
@@ -130,7 +134,6 @@ Système de surveillance FM - RTL-SDR
                 server.login(self.config['sender_email'], self.config['sender_password'])
                 server.sendmail(self.config['sender_email'], self.config['recipient_emails'], msg.as_string())
 
-            self.last_alert_time = datetime.now()
             logger.info(f"Alerte email envoyée: {alert_type}")
             return True
 
@@ -198,6 +201,9 @@ Système de surveillance FM - RTL-SDR
             part2 = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(part1)
             msg.attach(part2)
+
+            # Mettre à jour le cooldown AVANT la tentative d'envoi
+            self.last_alert_time = datetime.now()
 
             with smtplib.SMTP(self.config['smtp_server'], self.config['smtp_port']) as server:
                 if self.config['use_tls']:
