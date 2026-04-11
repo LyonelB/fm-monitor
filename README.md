@@ -309,3 +309,45 @@ MIT — libre d'utilisation, modification et distribution.
 - [redsea](https://github.com/windytan/redsea) — décodeur RDS
 - [Radio Browser](https://www.radio-browser.info) — base de données stations
 - [Icecast2](https://icecast.org) — serveur de streaming
+
+## Changement de source : RTL-SDR ↔ TEF668X Headless
+
+FM Monitor supporte deux sources matérielles, configurables dans `config.json` sans modifier le code.
+
+### Passer en mode TEF668X Headless
+
+1. Brancher le TEF668X Headless en USB-C (câble **données**, pas charge seule)
+2. Vérifier la détection : `ls /dev/ttyACM0` et `aplay -l | grep Tuner`
+3. Ajouter la section `tef` dans `config.json` :
+
+```json
+"tef": {
+    "enabled": true,
+    "serial_port": "/dev/ttyACM0",
+    "alsa_device": "hw:Tuner",
+    "signal_threshold_dbf": 20.0,
+    "modulation_threshold_dbfs": -40.0
+}
+```
+
+4. Installer la dépendance : `pip install pyserial --break-system-packages`
+5. Ajouter l'utilisateur au groupe dialout : `sudo usermod -a -G dialout $USER`
+6. Redémarrer : `sudo systemctl restart fm-monitor`
+
+### Revenir en mode RTL-SDR
+
+Mettre `"enabled": false` dans la section `tef` de `config.json` et redémarrer.
+
+### Différences entre les deux modes
+
+| Fonctionnalité | RTL-SDR | TEF668X Headless |
+|---|---|---|
+| Signal | dBFS (RMS PCM) | dBf (RF natif) |
+| Déviation FM | ✅ (MPXAnalyzer) | ❌ |
+| Pilote 19 kHz | ✅ | ❌ |
+| Stéréo 38 kHz | ✅ | ❌ |
+| RDS 57 kHz | ✅ | ❌ |
+| Stéréo/Mono | Via MPX | Via bit MS RDS |
+| Niveaux L/R | ✅ | ✅ |
+| SNR audio | ✅ | ✅ |
+| Qualité réception | Bonne | Excellente |
