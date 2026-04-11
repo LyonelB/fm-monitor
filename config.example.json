@@ -15,7 +15,8 @@
     "enabled": false,
     "serial_port": "/dev/ttyACM0",
     "alsa_device": "hw:Tuner",
-    "signal_threshold_dbf": 20.0
+    "signal_threshold_dbf": 20.0,
+    "modulation_threshold_dbfs": -40.0
   },
   "audio": {
     "output_rate": "44100",

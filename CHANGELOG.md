@@ -30,6 +30,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Badge MPX : **STÉRÉO / MONO** depuis RDS (mode TEF) ou MPX (mode RTL-SDR)
 - Logo station agrandi (150 px), RT pleine largeur sous PS+PI
 
+### Alertes en mode TEF
+- Surveillance modulation audio via `mpx_power` (TEFAudioAnalyzer)
+- Seuil configurable `tef.modulation_threshold_dbfs` (défaut : -40.0 dBFS)
+- Alerte email si audio < seuil pendant `modulation_alert_delay` secondes
+
 ### Compatibilité
 - Mode RTL-SDR inchangé (`tef.enabled: false`)
 - Interface identique `MPXAnalyzer` / `TEFAudioAnalyzer`

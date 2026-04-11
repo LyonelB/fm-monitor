@@ -75,8 +75,13 @@ class FMMonitor:
         # En mode TEF : seuil en dBf (ex : 20.0) ; en mode RTL-SDR : seuil en dBFS (ex : -50.0)
         if self.use_tef:
             self.signal_lost_threshold = float(self.tef_config.get('signal_threshold_dbf', 20.0))
+            # Seuil modulation en mode TEF : niveau audio sous lequel → absence modulation
+            self.tef_modulation_threshold = float(
+                self.tef_config.get('modulation_threshold_dbfs', -40.0)
+            )
         else:
             self.signal_lost_threshold = float(self.audio_config.get('signal_lost_threshold', -50.0))
+            self.tef_modulation_threshold = -40.0
 
         # Surveillance RDS
         self.rds_ok = False
@@ -841,56 +846,90 @@ class FMMonitor:
                     self.alert_sent = False
 
                 # ── 2. ABSENCE DE MODULATION (console coupée, porteuse présente) ──
-                # Non applicable en mode TEF (pas d'analyse PCM disponible)
-                if not self.use_tef and len(self.level_history) >= 20:
+                if self.use_tef:
+                    # Mode TEF : surveiller la puissance audio depuis TEFAudioAnalyzer
+                    mpx_results = self.mpx_analyzer.get_results()
+                    mpx_power = mpx_results.get('mpx_power', -100.0)
+                    no_modulation = (
+                        self.signal_ok and
+                        mpx_power < self.tef_modulation_threshold and
+                        mpx_power > -100.0  # -100 = pas encore de données
+                    )
+                    mod_detail = (
+                        f"Signal RF présent ({self.stats.get('signal_dbf', 0):.1f} dBf) "
+                        f"mais niveau audio très bas ({mpx_power:.1f} dBFS).\n"
+                        f"Seuil : {self.tef_modulation_threshold:.0f} dBFS\n"
+                        f"Vérifier la console du studio et la chaîne audio."
+                    )
+                    mod_restored_detail = (
+                        f"La modulation audio est à nouveau détectée.\n"
+                        f"Niveau audio : {mpx_power:.1f} dBFS"
+                    )
+                    mod_message = f"Absence modulation TEF - {mpx_power:.1f} dBFS"
+                    mod_restored_message = f"Modulation rétablie TEF - {mpx_power:.1f} dBFS"
+
+                elif len(self.level_history) >= 20:
+                    # Mode RTL-SDR : écart-type sur historique PCM
                     std = float(np.std(list(self.level_history)))
                     no_modulation = std < self.modulation_std_threshold
+                    mod_detail = (
+                        f"Signal FM présent ({current_level:.1f} dB) mais sans modulation audio depuis {{}}s.\n"
+                        f"Variation du niveau : ±{std:.2f} dB (seuil : ±{self.modulation_std_threshold} dB)\n"
+                        f"Vérifier la console du studio et la chaîne audio."
+                    )
+                    mod_restored_detail = (
+                        f"La modulation audio est à nouveau détectée.\n"
+                        f"Variation du niveau : ±{std:.2f} dB"
+                    )
+                    mod_message = f"Absence modulation - std {std:.2f} dB"
+                    mod_restored_message = f"Modulation rétablie - std {std:.2f} dB"
+                else:
+                    no_modulation = False
+                    mod_detail = mod_restored_detail = mod_message = mod_restored_message = ''
 
-                    if no_modulation:
-                        if self.no_modulation_start is None:
-                            self.no_modulation_start = time.time()
-                        absence_duration = time.time() - self.no_modulation_start
+                if no_modulation:
+                    if self.no_modulation_start is None:
+                        self.no_modulation_start = time.time()
+                    absence_duration = time.time() - self.no_modulation_start
 
-                        if absence_duration >= self.modulation_alert_delay and not self.modulation_alert_sent:
-                            logger.warning(f"Absence modulation ({std:.2f} dB std, {absence_duration:.0f}s) - ENVOI ALERTE")
-                            success = self.email_alert.send_alert(
-                                alert_type="Absence de modulation audio",
-                                details=f"Signal FM présent ({current_level:.1f} dB) mais sans modulation audio depuis {int(absence_duration)}s.\n"
-                                        f"Variation du niveau : ±{std:.2f} dB (seuil : ±{self.modulation_std_threshold} dB)\n"
-                                        f"Vérifier la console du studio et la chaîne audio.",
-                                skip_cooldown=True
-                            )
-                            if success:
-                                self.modulation_alert_sent = True
-                                self.modulation_ok = False
-                                with self.stats_lock:
-                                    self.stats['alerts_sent'] += 1
-                                    self.stats['last_alert'] = datetime.now().isoformat()
-                                self.db.save_alert(
-                                    alert_type='no_modulation',
-                                    level_db=current_level,
-                                    duration_seconds=int(absence_duration),
-                                    message=f"Absence modulation - std {std:.2f} dB",
-                                    email_sent=True
-                                )
-                    else:
-                        if self.modulation_alert_sent:
-                            logger.info(f"Modulation rétablie (std={std:.2f} dB)")
-                            self.email_alert.send_alert(
-                                alert_type="Modulation audio rétablie",
-                                details=f"La modulation audio est à nouveau détectée.\nVariation du niveau : ±{std:.2f} dB",
-                                skip_cooldown=True
-                            )
+                    if absence_duration >= self.modulation_alert_delay and not self.modulation_alert_sent:
+                        logger.warning(f"Absence modulation ({absence_duration:.0f}s) - ENVOI ALERTE")
+                        success = self.email_alert.send_alert(
+                            alert_type="Absence de modulation audio",
+                            details=mod_detail.format(int(absence_duration)) if '{}' in mod_detail else mod_detail,
+                            skip_cooldown=True
+                        )
+                        if success:
+                            self.modulation_alert_sent = True
+                            self.modulation_ok = False
+                            with self.stats_lock:
+                                self.stats['alerts_sent'] += 1
+                                self.stats['last_alert'] = datetime.now().isoformat()
                             self.db.save_alert(
-                                alert_type='modulation_restored',
+                                alert_type='no_modulation',
                                 level_db=current_level,
-                                duration_seconds=0,
-                                message=f"Modulation rétablie - std {std:.2f} dB",
+                                duration_seconds=int(absence_duration),
+                                message=mod_message,
                                 email_sent=True
                             )
-                        self.modulation_ok = True
-                        self.modulation_alert_sent = False
-                        self.no_modulation_start = None
+                elif mod_message:
+                    if self.modulation_alert_sent:
+                        logger.info("Modulation rétablie")
+                        self.email_alert.send_alert(
+                            alert_type="Modulation audio rétablie",
+                            details=mod_restored_detail,
+                            skip_cooldown=True
+                        )
+                        self.db.save_alert(
+                            alert_type='modulation_restored',
+                            level_db=current_level,
+                            duration_seconds=0,
+                            message=mod_restored_message,
+                            email_sent=True
+                        )
+                    self.modulation_ok = True
+                    self.modulation_alert_sent = False
+                    self.no_modulation_start = None
 
                 # ── 3. SURVEILLANCE RDS ────────────────────────────────────────
                 if self.rds_enabled and self.rds_ever_received:
