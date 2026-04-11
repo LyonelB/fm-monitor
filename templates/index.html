@@ -7,6 +7,7 @@
   <title>FM Monitor — Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <style>
     body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
     .sidebar-link { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; color:#64748b; font-size:0.875rem; font-weight:500; transition:all 0.15s; text-decoration:none; }
@@ -531,11 +532,10 @@
     // =============================================
     // GRAPHIQUE TEMPS RÉEL (30 secondes)
     // =============================================
-    const REALTIME_WINDOW   = 60;
-    const REALTIME_INTERVAL = 1000;
+    const REALTIME_WINDOW   = 120;
+    const REALTIME_INTERVAL = 500;
     let audioChart = null;
-    let realtimeLabels = [];
-    let realtimeData   = [];
+    let realtimeData = [];  // tableau d'objets {x: timestamp ms, y: valeur}
     let lastRealtimePush = 0;
 
     function initRealtimeChart() {
@@ -543,16 +543,15 @@
         audioChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: realtimeLabels,
                 datasets: [{
                     label: 'Signal RF (dBf)',
                     data: realtimeData,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59,130,246,0.08)',
                     borderWidth: 1.5,
-                        pointRadius: 0,
-                        tension: 0.5,
-                        fill: true
+                    pointRadius: 0,
+                    tension: 0.5,
+                    fill: true
                 }]
             },
             options: {
@@ -566,10 +565,18 @@
                         grid: { color: 'rgba(0,0,0,0.04)' }
                     },
                     x: {
-                        ticks: { maxTicksLimit: 6, maxRotation: 0, font: { size: 10 } },
+                        type: 'time',
+                        time: {
+                            unit: 'second',
+                            displayFormats: { second: 'HH:mm:ss' },
+                            tooltipFormat: 'HH:mm:ss'
+                        },
+                        ticks: { maxTicksLimit: 6, maxRotation: 0, font: { size: 10 },
+                                 source: 'auto' },
                         grid: { display: false }
                     }
-                }
+                },
+                animation: { duration: 0 }
             }
         });
     }
@@ -578,28 +585,35 @@
         const now = Date.now();
         if (now - lastRealtimePush < REALTIME_INTERVAL) return;
         lastRealtimePush = now;
-        const label = new Date(now).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-        realtimeLabels.push(label);
-        realtimeData.push(Math.round(levelDb * 10) / 10);
-        if (realtimeLabels.length > REALTIME_WINDOW) { realtimeLabels.shift(); realtimeData.shift(); }
+
+        realtimeData.push({ x: now, y: Math.round(levelDb * 10) / 10 });
+
+        // Garder seulement les REALTIME_WINDOW dernières secondes
+        const cutoff = now - REALTIME_WINDOW * 1000;
+        while (realtimeData.length > 0 && realtimeData[0].x < cutoff) {
+            realtimeData.shift();
+        }
+
         if (audioChart && realtimeData.length > 0) {
-            // Détecter le mode TEF : valeurs > 0 = dBf, sinon dBFS
-            const isTEF = realtimeData.some(v => v > 0);
+            // Fenêtre glissante : axe X = [maintenant - 60s, maintenant]
+            audioChart.options.scales.x.min = cutoff;
+            audioChart.options.scales.x.max = now;
+
+            // Échelle Y adaptative
+            const values = realtimeData.map(p => p.y);
+            const isTEF = values.some(v => v > 0);
             if (isTEF) {
-                // Échelle adaptative ±1 dBf autour du signal reçu
-                const dMin = Math.min(...realtimeData);
-                const dMax = Math.max(...realtimeData);
+                const dMin = Math.min(...values), dMax = Math.max(...values);
                 const center = (dMin + dMax) / 2;
                 const halfRange = Math.max(1, (dMax - dMin) / 2 + 1);
                 audioChart.options.scales.y.min = Math.max(0,  Math.floor((center - halfRange) * 10) / 10);
                 audioChart.options.scales.y.max = Math.min(60, Math.ceil( (center + halfRange) * 10) / 10);
             } else {
-                // Mode RTL-SDR : auto-scale -100..0
-                const dMin = Math.min(...realtimeData), dMax = Math.max(...realtimeData), margin = 5;
+                const dMin = Math.min(...values), dMax = Math.max(...values), margin = 5;
                 audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
-                audioChart.options.scales.y.max = Math.min(0, Math.ceil((dMax + margin) / 10) * 10);
+                audioChart.options.scales.y.max = Math.ceil((dMax + margin) / 10) * 10;
             }
-            audioChart.update({ duration: 800, easing: 'easeInOutQuad' });
+            audioChart.update('none');
         }
     }
 
@@ -612,7 +626,7 @@
     let _smoothBuf = [];
     function smoothedLevel(val) {
         _smoothBuf.push(val);
-        if (_smoothBuf.length > 3) _smoothBuf.shift();
+        if (_smoothBuf.length > 2) _smoothBuf.shift();
         return _smoothBuf.reduce((a, b) => a + b, 0) / _smoothBuf.length;
     }
 
