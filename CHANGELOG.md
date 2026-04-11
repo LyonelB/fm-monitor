@@ -3,7 +3,8 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
-## [Unreleased - feature/tef-headless]
+et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+## [0.5.2] - 2026-04-10
 ### 🎉 Support TEF668X Headless USB Tuner
 #### Nouveau matériel supporté
 - **TEF668X Headless Lite SE** (FMDX-org, firmware FM-DX-Tuner / kkonradpl) via USB-C
@@ -39,7 +40,6 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Mode RTL-SDR inchangé (`tef.enabled: false`)
 - Interface identique `MPXAnalyzer` / `TEFAudioAnalyzer`
 
-et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [0.5.1] - 2026-03-17
 
