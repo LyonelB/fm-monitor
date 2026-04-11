@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Module de surveillance du signal FM avec RTL-SDR - Calcul RMS direct
-Basé sur l'approche fonctionnelle avec lecture directe du stdout
+Module de surveillance du signal FM
+Supporte deux sources :
+  - RTL-SDR (mode historique, rtl_fm + redsea)
+  - TEF668X Headless USB Tuner (mode natif, tef_driver)
 """
 import subprocess
 import threading
@@ -17,6 +19,17 @@ from datetime import datetime
 from email_alert import EmailAlert
 from database import FMDatabase
 from mpx_analyzer import MPXAnalyzer
+try:
+    from tef_driver import TEFDriver
+    _TEF_AVAILABLE = True
+except ImportError:
+    _TEF_AVAILABLE = False
+
+try:
+    from tef_audio_analyzer import TEFAudioAnalyzer
+    _TEF_AUDIO_AVAILABLE = True
+except ImportError:
+    _TEF_AUDIO_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +41,16 @@ class FMMonitor:
 
         self.rtl_config = self.config['rtl_sdr']
         self.audio_config = self.config['audio']
+        self.tef_config = self.config.get('tef', {})
+        self.use_tef = self.tef_config.get('enabled', False)
+        self.tef_driver = None
+
+        # En mode TEF : remplacer MPXAnalyzer par TEFAudioAnalyzer
+        if self.use_tef and _TEF_AUDIO_AVAILABLE:
+            alsa_dev = self.tef_config.get('alsa_device', 'hw:Tuner')
+            self.mpx_analyzer = TEFAudioAnalyzer(alsa_device=alsa_dev)
+        else:
+            self.mpx_analyzer = MPXAnalyzer(sample_rate=171000, process_every=4)
 
         # Queue pour le streaming MP3
         self.stream_queue = queue.Queue(maxsize=500)
@@ -49,7 +72,11 @@ class FMMonitor:
         self.no_modulation_start = None
         self.modulation_std_threshold = float(self.audio_config.get('modulation_std_threshold', 1.5))
         self.modulation_alert_delay = int(self.audio_config.get('modulation_alert_delay', 30))
-        self.signal_lost_threshold = float(self.audio_config.get('signal_lost_threshold', -50.0))
+        # En mode TEF : seuil en dBf (ex : 20.0) ; en mode RTL-SDR : seuil en dBFS (ex : -50.0)
+        if self.use_tef:
+            self.signal_lost_threshold = float(self.tef_config.get('signal_threshold_dbf', 20.0))
+        else:
+            self.signal_lost_threshold = float(self.audio_config.get('signal_lost_threshold', -50.0))
 
         # Surveillance RDS
         self.rds_ok = False
@@ -104,9 +131,6 @@ class FMMonitor:
         self.history_enabled = False        # Enregistrement historique audio 24h
         self.mpx_enabled = True            # Analyse MPX (déviation, pilote, stéréo, RDS RF)
 
-        # Analyseur MPX (process_every=4 → mise à jour ~48ms, adapté Pi 3B+)
-        self.mpx_analyzer = MPXAnalyzer(sample_rate=171000, process_every=4)
-
         # Alerte sur-déviation
         self.deviation_alert_threshold = float(
             self.audio_config.get('deviation_alert_threshold', 80.0)
@@ -155,7 +179,10 @@ class FMMonitor:
 
         elif service == 'rds':
             self.rds_enabled = enabled
-            if enabled:
+            if self.use_tef:
+                # En mode TEF le RDS arrive toujours via le driver série
+                logger.info(f"Mode TEF : RDS toujours actif (flag mis à {enabled})")
+            elif enabled:
                 # Lancer le thread RDS si pas déjà actif
                 if not hasattr(self, 'rds_thread') or not self.rds_thread.is_alive():
                     self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
@@ -191,28 +218,34 @@ class FMMonitor:
         self.stats['start_time'] = datetime.now()
         self.stats['status'] = 'En cours'
 
-        # Créer le FIFO pour le streaming audio
-        fifo_path = '/tmp/fm_stream.mp3'
-        if os.path.exists(fifo_path):
-            os.remove(fifo_path)
-        os.mkfifo(fifo_path)
-        logger.info(f"FIFO créé : {fifo_path}")
-
-        # Nettoyer les processus existants
-        os.system("pkill -9 rtl_fm 2>/dev/null")
-        os.system("pkill -9 sox 2>/dev/null")
-        time.sleep(0.5)
-
         try:
-            # Démarrer le processus maître (rtl_fm - toujours actif)
-            self.master_thread = threading.Thread(target=self._master_monitor, daemon=True)
-            self.master_thread.start()
+            if self.use_tef:
+                # ── Mode TEF668X ──────────────────────────────────────────────
+                self._start_tef_mode()
+            else:
+                # ── Mode RTL-SDR (original) ───────────────────────────────────
+                fifo_path = '/tmp/fm_stream.mp3'
+                if os.path.exists(fifo_path):
+                    os.remove(fifo_path)
+                os.mkfifo(fifo_path)
+                logger.info(f"FIFO créé : {fifo_path}")
 
-            # Démarrer le streaming MP3
-            self.stream_thread = threading.Thread(target=self._stream_monitor, daemon=True)
-            self.stream_thread.start()
+                os.system("pkill -9 rtl_fm 2>/dev/null")
+                os.system("pkill -9 sox 2>/dev/null")
+                time.sleep(0.5)
 
-            # Thread de surveillance du signal (toujours actif pour les alertes)
+                self.master_thread = threading.Thread(target=self._master_monitor, daemon=True)
+                self.master_thread.start()
+
+                self.stream_thread = threading.Thread(target=self._stream_monitor, daemon=True)
+                self.stream_thread.start()
+
+                if self.rds_enabled:
+                    self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
+                    self.rds_thread.start()
+
+            # ── Threads communs aux deux modes ────────────────────────────
+            # Thread de surveillance du signal (alertes)
             self.monitor_thread = threading.Thread(target=self._monitor_signal, daemon=True)
             self.monitor_thread.start()
 
@@ -225,7 +258,7 @@ class FMMonitor:
             self.db_writer_thread.start()
 
             # RDS désactivé par défaut (activable depuis le dashboard)
-            if self.rds_enabled:
+            if not self.use_tef and self.rds_enabled:
                 self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
                 self.rds_thread.start()
 
@@ -241,7 +274,7 @@ class FMMonitor:
             raise
 
     def _watchdog(self):
-        """Thread de surveillance qui relance rtl_fm si crash"""
+        """Thread de surveillance qui relance le processus maître si crash"""
         logger.info("Watchdog démarré")
 
         while self.running:
@@ -255,19 +288,31 @@ class FMMonitor:
                 if not self.watchdog_enabled:
                     continue
 
-                # Vérifier si le processus master est mort
-                if self.master_process and self.master_process.poll() is not None:
-                    logger.error("rtl_fm a planté ! Relance automatique...")
+                if self.use_tef:
+                    # Mode TEF : surveiller le driver série et le processus audio
+                    if self.tef_driver and not self.tef_driver.is_alive():
+                        logger.error("TEFDriver mort — relance automatique")
+                        freq_khz = self._parse_freq_khz(self.rtl_config['frequency'])
+                        self.tef_driver.start(freq_khz)
 
-                    os.system("pkill -9 rtl_fm 2>/dev/null")
-                    os.system("pkill -9 sox 2>/dev/null")
-                    os.system("pkill -9 redsea 2>/dev/null")
-                    time.sleep(2)
-
-                    self.master_thread = threading.Thread(target=self._master_monitor, daemon=True)
-                    self.master_thread.start()
-
-                    logger.info("rtl_fm relancé automatiquement")
+                    if self.master_process and self.master_process.poll() is not None:
+                        logger.error("Audio TEF planté — relance automatique")
+                        alsa_dev = self.tef_config.get('alsa_device', 'hw:Tuner')
+                        self.master_thread = threading.Thread(
+                            target=self._tef_audio, args=(alsa_dev,), daemon=True
+                        )
+                        self.master_thread.start()
+                else:
+                    # Mode RTL-SDR : surveiller master_process
+                    if self.master_process and self.master_process.poll() is not None:
+                        logger.error("rtl_fm a planté ! Relance automatique...")
+                        os.system("pkill -9 rtl_fm 2>/dev/null")
+                        os.system("pkill -9 sox 2>/dev/null")
+                        os.system("pkill -9 redsea 2>/dev/null")
+                        time.sleep(2)
+                        self.master_thread = threading.Thread(target=self._master_monitor, daemon=True)
+                        self.master_thread.start()
+                        logger.info("rtl_fm relancé automatiquement")
 
             except Exception as e:
                 logger.error(f"Erreur watchdog: {e}")
@@ -372,6 +417,187 @@ class FMMonitor:
         finally:
             if self.master_process:
                 self.master_process.kill()
+
+    # ══════════════════════════════════════════════════════════════════
+    # MÉTHODES TEF668X
+    # ══════════════════════════════════════════════════════════════════
+
+    def _start_tef_mode(self):
+        """Initialise le driver TEF série et le pipeline audio ALSA→Icecast."""
+        if not _TEF_AVAILABLE:
+            raise RuntimeError("tef_driver.py introuvable — impossible de démarrer en mode TEF")
+
+        freq_khz = self._parse_freq_khz(self.rtl_config['frequency'])
+        port     = self.tef_config.get('serial_port', '/dev/ttyACM0')
+        alsa_dev = self.tef_config.get('alsa_device', 'hw:Tuner')
+
+        self.tef_driver = TEFDriver(
+            port=port,
+            on_signal=self._on_tef_signal,
+            on_pi=self._on_tef_pi,
+            on_ps=self._on_tef_ps,
+            on_rt=self._on_tef_rt,
+            on_ms=self._on_tef_ms,
+        )
+        self.tef_driver.start(freq_khz)
+
+        # TEFAudioAnalyzer : pas de start() autonome,
+        # il est alimenté directement par _tef_audio via _process()
+        # (évite le conflit ALSA avec arecord)
+
+        self.master_thread = threading.Thread(
+            target=self._tef_audio, args=(alsa_dev,), daemon=True, name='tef-audio'
+        )
+        self.master_thread.start()
+        logger.info(f"Mode TEF démarré — série {port}, audio {alsa_dev}, {freq_khz} kHz")
+
+    def _parse_freq_khz(self, freq_str):
+        """
+        Convertit une fréquence config en kHz entier.
+        '88.6M' → 88600 | '88600000' → 88600 | '88.600' → 88600
+        """
+        s = str(freq_str).strip().upper().replace(' ', '')
+        if s.endswith('M'):
+            return int(float(s[:-1]) * 1000)
+        val = float(s)
+        if val > 1_000_000:    # Hz
+            return int(val / 1000)
+        if val > 10_000:       # kHz
+            return int(val)
+        return int(val * 1000) # MHz
+
+    def _tef_audio(self, alsa_device='hw:Tuner'):
+        """
+        Thread audio TEF : ffmpeg asplit pour deux sorties simultanées :
+          - Output 0 → Icecast (MP3)
+          - Output 1 → stdout PCM brut → TEFAudioAnalyzer._process()
+        Un seul process, pas de bash tee, latence minimale.
+        """
+        output_rate = self.audio_config.get('output_rate', '44100')
+        icecast_url = 'icecast://source:fmmonitor2026@localhost:8000/fmmonitor'
+
+        cmd = (
+            f'ffmpeg -hide_banner -loglevel error '
+            f'-fflags nobuffer -flags low_delay '
+            f'-f alsa -ar 48000 -ac 2 -i {alsa_device} '
+            f'-filter_complex "[0:a]asplit=2[icecast][pcm]" '
+            f'-map "[icecast]" -codec:a libmp3lame -b:a 128k -ar {output_rate} -ac 2 '
+            f'-content_type audio/mpeg -f mp3 {icecast_url} '
+            f'-map "[pcm]" -fflags nobuffer -f s16le -ar 48000 -ac 2 pipe:1'
+        )
+
+        logger.info(f"Audio TEF : {alsa_device} → Icecast + analyse via ffmpeg asplit")
+        try:
+            self.master_process = subprocess.Popen(
+                cmd, shell=True, executable='/bin/bash',
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                bufsize=0,
+            )
+
+            # Lire le PCM depuis stdout et alimenter _process() toutes les 50ms
+            period_bytes  = 480 * 4   # 10ms de PCM S16_LE stéréo
+            process_every = 5         # 5 × 10ms = 50ms par analyse
+            count = 0
+            accum = b''
+            buf   = b''
+
+            while self.running and self.master_process.poll() is None:
+                chunk = self.master_process.stdout.read(period_bytes - len(buf))
+                if not chunk:
+                    break
+                buf += chunk
+                if len(buf) >= period_bytes:
+                    accum += buf[:period_bytes]
+                    buf    = buf[period_bytes:]
+                    count += 1
+                    if count >= process_every:
+                        if hasattr(self.mpx_analyzer, '_process'):
+                            self.mpx_analyzer._process(accum)
+                        accum = b''
+                        count = 0
+
+        except Exception as e:
+            logger.error(f"Erreur audio TEF: {e}")
+        finally:
+            if self.master_process:
+                try:
+                    self.master_process.kill()
+                except Exception:
+                    pass
+
+    # ── Callbacks TEF → stats ────────────────────────────────────────
+
+    def _on_tef_signal(self, dbf, snr, multipath, offset):
+        """Reçoit les métriques signal du TEF (~1/s)."""
+        threshold  = self.tef_config.get('signal_threshold_dbf', 20.0)
+        signal_ok  = dbf >= threshold
+        with self.stats_lock:
+            self.stats['current_level']    = dbf
+            self.stats['signal_dbf']       = dbf
+            self.stats['snr']              = snr
+            self.stats['multipath']        = multipath
+            self.stats['freq_offset']      = offset
+            self.stats['modulation_active'] = signal_ok
+        self.signal_ok = signal_ok
+        # Normalisation pour le VU-mètre du dashboard (qui attend -100..0 dBFS)
+        # On mappe dBf (0..60) vers (-60..0) : valeur_display = dBf - 60
+        with self.stats_lock:
+            self.stats['current_level']     = dbf - 60.0
+            self.stats['signal_dbf']        = dbf
+            self.stats['snr']               = snr
+            self.stats['multipath']         = multipath
+            self.stats['freq_offset']       = offset
+            self.stats['modulation_active'] = signal_ok
+        if self.history_enabled and time.time() - self.last_db_save >= 5:
+            try:
+                self.db_queue.put_nowait({'level': dbf, 'signal_ok': signal_ok})
+                self.last_db_save = time.time()
+            except queue.Full:
+                pass
+
+    def _on_tef_pi(self, pi):
+        """Reçoit le code PI RDS du TEF."""
+        with self.stats_lock:
+            old_pi = self.stats.get('pi', '-')
+            if pi != old_pi and pi not in ('', '-'):
+                logger.info(f'PI changé {old_pi} → {pi}')
+                self._logo_searched     = False
+                self._logo_last_attempt = 0
+                self.stats['station_logo'] = None
+                self._rds_db_reload     = True
+                self.stats['pi']        = pi
+                import threading as _t
+                _t.Thread(target=self._fetch_station_logo, daemon=True).start()
+            else:
+                self.stats['pi'] = pi
+            self.rds_last_seen     = time.time()
+            self.rds_ever_received = True
+            self.rds_ok            = True
+
+    def _on_tef_ps(self, ps):
+        """Reçoit le PS (nom station RDS) du TEF."""
+        with self.stats_lock:
+            self.stats['ps']       = ps
+            self.rds_last_seen     = time.time()
+            self.rds_ever_received = True
+            self.rds_ok            = True
+            if not self._logo_searched:
+                import threading as _t
+                _t.Thread(target=self._fetch_station_logo, daemon=True).start()
+
+    def _on_tef_rt(self, rt):
+        """Reçoit le RadioText RDS du TEF."""
+        with self.stats_lock:
+            if rt:
+                self.stats['rt'] = rt
+                self.rt_buffer   = rt
+
+    def _on_tef_ms(self, is_stereo):
+        """Reçoit le flag MS (Music/Stereo) depuis le groupe RDS 0A."""
+        with self.stats_lock:
+            self.stats['stereo_present'] = is_stereo
+
+    # ══════════════════════════════════════════════════════════════════
 
     def _stream_monitor(self):
         """Lit /tmp/fm_stream.mp3 et le met dans la queue"""
@@ -564,8 +790,15 @@ class FMMonitor:
                 self.level_history.append(current_level)
 
                 # ── 1. PERTE TOTALE DE L'ÉMETTEUR (porteuse absente) ──────────
-                # Seuil très bas : -50 dB par défaut → vrai crash émetteur
-                if current_level < self.signal_lost_threshold:
+                # En mode TEF : current_level est en dBf, signal_ok déjà géré
+                # par _on_tef_signal(). On surveille quand même pour les alertes.
+                if not self.use_tef:
+                    # Seuil très bas : -50 dB par défaut → vrai crash émetteur
+                    signal_lost = current_level < self.signal_lost_threshold
+                else:
+                    signal_lost = not self.signal_ok
+
+                if signal_lost:
                     if self.signal_ok:
                         self.signal_ok = False
                         self.silence_start_time = time.time()
@@ -608,7 +841,8 @@ class FMMonitor:
                     self.alert_sent = False
 
                 # ── 2. ABSENCE DE MODULATION (console coupée, porteuse présente) ──
-                if len(self.level_history) >= 20:
+                # Non applicable en mode TEF (pas d'analyse PCM disponible)
+                if not self.use_tef and len(self.level_history) >= 20:
                     std = float(np.std(list(self.level_history)))
                     no_modulation = std < self.modulation_std_threshold
 
@@ -699,7 +933,7 @@ class FMMonitor:
                         self.rds_alert_sent = False
 
                 # ── 4. SURVEILLANCE SUR-DÉVIATION FM ─────────────────────────
-                if self.mpx_enabled:
+                if self.mpx_enabled and not self.use_tef:
                     mpx = self.mpx_analyzer.get_results()
                     deviation = mpx.get('deviation_peak', 0.0)
 
@@ -901,7 +1135,11 @@ class FMMonitor:
 
         # Données MPX (déviation, pilote, stéréo, RDS RF)
         if self.mpx_enabled:
-            stats.update(self.mpx_analyzer.get_results())
+            mpx = self.mpx_analyzer.get_results()
+            if self.use_tef:
+                # En mode TEF, stereo_present vient du bit MS RDS — ne pas écraser
+                mpx.pop('stereo_present', None)
+            stats.update(mpx)
 
         if stats['start_time']:
             stats['start_time'] = stats['start_time'].strftime('%d/%m/%Y %H:%M:%S')
@@ -931,6 +1169,13 @@ class FMMonitor:
 
         if self.master_process:
             self.master_process.kill()
+
+        if self.tef_driver:
+            self.tef_driver.stop()
+            self.tef_driver = None
+
+        if _TEF_AUDIO_AVAILABLE and hasattr(self.mpx_analyzer, 'stop'):
+            self.mpx_analyzer.stop()
 
         os.system("pkill -9 rtl_fm 2>/dev/null")
         os.system("pkill -9 sox 2>/dev/null")

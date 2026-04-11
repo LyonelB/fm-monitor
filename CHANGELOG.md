@@ -3,6 +3,37 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
+## [Unreleased - feature/tef-headless]
+### 🎉 Support TEF668X Headless USB Tuner
+#### Nouveau matériel supporté
+- **TEF668X Headless Lite SE** (FMDX-org, firmware FM-DX-Tuner / kkonradpl) via USB-C
+- Audio numérique USB natif (USB Audio Class, S16_LE stéréo 48 kHz)
+- Protocole série XDR-GTK sur `/dev/ttyACM0`
+
+#### Nouveaux modules
+- **`tef_driver.py`** : driver série TEF668X — tuning, métriques signal (dBf/SNR/multipath), décodage RDS natif (PI/PS/RT/MS)
+- **`tef_audio_analyzer.py`** : analyse audio stéréo 48 kHz via numpy — niveaux L/R, puissance, SNR audio
+- **`config.example.json`** : exemple de configuration avec section `tef`
+
+#### Modifications monitor.py
+- Mode TEF activé via `config.json` → `tef.enabled: true`
+- Basculement automatique TEF / RTL-SDR selon configuration
+- Pipeline audio : `ffmpeg asplit` → Icecast + analyse simultanée
+- Signal RF en dBf (0–60) au lieu de dBFS
+- Détection stéréo/mono depuis bit MS du groupe RDS 0A
+- Analyse MPX partielle (L/R, puissance audio, SNR audio)
+
+#### Dashboard
+- VU-mètre renommé **Signal RF** avec jauge 0–60 dBf
+- Barres L/R déplacées dans la carte Signal RF
+- Graphique temps réel adaptatif ±1 dBf autour du signal
+- Badge MPX : **STÉRÉO / MONO** depuis RDS (mode TEF) ou MPX (mode RTL-SDR)
+- Logo station agrandi (150 px), RT pleine largeur sous PS+PI
+
+### Compatibilité
+- Mode RTL-SDR inchangé (`tef.enabled: false`)
+- Interface identique `MPXAnalyzer` / `TEFAudioAnalyzer`
+
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [0.5.1] - 2026-03-17

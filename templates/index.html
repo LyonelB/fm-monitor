@@ -17,7 +17,7 @@
     .dot-orange { background:#f97316; box-shadow:0 0 6px #f9731688; }
     .dot-red    { background:#ef4444; box-shadow:0 0 6px #ef444488; }
     .dot-gray   { background:#9ca3af; }
-    .vu-bar { height:5px; border-radius:3px; transition:width 0.08s ease; }
+    .vu-bar { height:5px; border-radius:3px; transition:width 0.2s ease-out; }
     .card { background:white; border:1px solid #f1f5f9; border-radius:12px; padding:14px; }
     .section-label { font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.06em; }
     @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -98,13 +98,13 @@
 
       <!-- Bloc 1 : Logo station + RDS -->
       <div class="card flex gap-0 p-0 overflow-hidden">
-        <!-- Logo 100×100 — toujours visible, placeholder par défaut -->
-        <div id="station-logo-container" class="flex-shrink-0 flex items-center justify-center bg-gray-50 border-r border-gray-100" style="width:100px; min-height:100px">
+        <!-- Logo 150×150 — toujours visible, placeholder par défaut -->
+        <div id="station-logo-container" class="flex-shrink-0 flex items-center justify-center bg-gray-50 border-r border-gray-100" style="width:150px; min-height:120px">
           <img id="station-logo" src="" alt="Logo"
-            class="hidden object-contain p-2" style="width:100px; height:100px">
+            class="hidden object-contain p-3" style="width:150px; height:150px">
           <div id="station-logo-placeholder"
-            class="flex flex-col items-center justify-center gap-1.5" style="width:100px; height:100px">
-            <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="flex flex-col items-center justify-center gap-1.5" style="width:150px; height:150px">
+            <svg class="w-14 h-14 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
             </svg>
@@ -112,24 +112,26 @@
           </div>
         </div>
         <!-- Champs RDS -->
-        <div class="flex-1 min-w-0 p-3 flex flex-col justify-center">
-          <div class="flex items-center gap-2 mb-2">
+        <div class="flex-1 min-w-0 p-3 flex flex-col justify-center gap-2">
+          <div class="flex items-center gap-2">
             <span class="section-label">RDS</span>
             <span id="rds-status-dot" class="dot dot-gray"></span>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <!-- Ligne 1 : PS + PI côte à côte -->
+          <div class="grid grid-cols-2 gap-2">
             <div>
               <div class="text-xs text-gray-400 mb-1">PS</div>
               <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center" id="rds-ps-display">—</div>
             </div>
             <div>
-              <div class="text-xs text-gray-400 mb-1">RT</div>
-              <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center truncate" id="rds-rt-display">—</div>
-            </div>
-            <div>
               <div class="text-xs text-gray-400 mb-1">PI</div>
               <div class="font-mono text-sm font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 text-center" id="rds-pi-display">—</div>
             </div>
+          </div>
+          <!-- Ligne 2 : RT pleine largeur -->
+          <div>
+            <div class="text-xs text-gray-400 mb-1">RT</div>
+            <div class="font-mono text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1.5 rounded border border-gray-100 w-full overflow-hidden" id="rds-rt-display" style="white-space:normal;word-break:break-word;line-height:1.4">—</div>
           </div>
         </div>
       </div>
@@ -173,17 +175,40 @@
       <!-- ══ Col gauche ══ -->
       <div class="flex flex-col gap-3">
 
-        <!-- VU-Mètre + Player -->
+        <!-- Signal RF + Player -->
         <div class="card">
           <div class="flex justify-between items-center mb-2">
-            <span class="section-label">VU-Mètre audio</span>
-            <span class="text-sm font-bold font-mono text-gray-900" id="vu-meter-value-main">-100.00 dB</span>
+            <span class="section-label">Signal RF</span>
+            <span class="text-sm font-bold font-mono text-gray-900" id="vu-meter-value-main">— dBf</span>
           </div>
           <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-0.5">
             <div id="vu-meter-bar-main" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
           </div>
-          <div class="flex justify-between text-xs text-gray-400 font-mono mb-3">
-            <span>-100</span><span>-80</span><span>-60</span><span>-40</span><span>-20</span><span>0 dB</span>
+          <div class="flex justify-between text-xs text-gray-400 font-mono mb-1">
+            <span>0</span><span>15</span><span>30</span><span>45</span><span>60 dBf</span>
+          </div>
+          <!-- SNR + Multipath en ligne sous la barre -->
+          <!-- Niveaux L / R -->
+          <div class="mb-1.5">
+            <div class="flex justify-between items-baseline mb-0.5">
+              <span class="text-xs font-semibold text-gray-600">L</span>
+              <span class="text-xs font-mono text-gray-500" id="mpx-val-left">— dBFS</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-left" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="flex justify-between items-baseline mb-0.5">
+              <span class="text-xs font-semibold text-gray-600">R</span>
+              <span class="text-xs font-mono text-gray-500" id="mpx-val-right">— dBFS</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div id="mpx-bar-right" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
+              <span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span>
+            </div>
           </div>
 
           <div class="border-t border-gray-100 mb-3"></div>
@@ -216,34 +241,6 @@
             </div>
           </div>
           <audio id="audio-player" preload="none"></audio>
-        </div>
-
-        <!-- L/R stéréo -->
-        <div class="card">
-          <div class="section-label mb-3">Audio stéréo L/R</div>
-          <!-- Left -->
-          <div class="mb-2">
-            <div class="flex justify-between items-baseline mb-1">
-              <span class="text-xs font-semibold text-gray-600">Left <span class="font-normal text-gray-400">L</span></span>
-              <span class="text-xs font-mono text-gray-500" id="mpx-val-left">— dBFS</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-              <div id="mpx-bar-left" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
-            </div>
-          </div>
-          <!-- Right -->
-          <div>
-            <div class="flex justify-between items-baseline mb-1">
-              <span class="text-xs font-semibold text-gray-600">Right <span class="font-normal text-gray-400">R</span></span>
-              <span class="text-xs font-mono text-gray-500" id="mpx-val-right">— dBFS</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-              <div id="mpx-bar-right" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
-            </div>
-          </div>
-          <div class="flex justify-between text-xs text-gray-400 font-mono mt-1">
-            <span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span>
-          </div>
         </div>
 
       </div><!-- /col gauche -->
@@ -348,7 +345,7 @@
     <!-- ── Historique audio — pleine largeur ─────────────────── -->
     <div class="card flex-1" style="min-height:140px">
       <div class="flex justify-between items-center mb-2">
-        <span class="section-label">Niveaux audio — 30 s</span>
+        <span class="section-label">Signal RF — 60 s</span>
         <span class="text-xs text-gray-400 font-mono" id="realtime-chart-status">En direct</span>
       </div>
       <div style="height:calc(100% - 28px)">
@@ -367,17 +364,30 @@
     }
 
     // =============================================
-    // VU-MÈTRE AUDIO
+    // VU-MÈTRE / SIGNAL RF
     // =============================================
-    function updateVUMeter(levelValue) {
-        const value = Math.max(0, Math.min(100, levelValue));
-        const dbValue = value - 100;
-        document.getElementById('vu-meter-value-main').textContent = dbValue.toFixed(2) + ' dB';
+    function updateVUMeter(stats) {
+        // En mode TEF : signal_dbf (0..60 dBf)
+        // En mode RTL-SDR : current_level (-100..0 dBFS)
+        const dbf = stats.signal_dbf;
+        let pct, label;
+        if (dbf !== undefined && dbf !== null) {
+            // Mode TEF — jauge 0..60 dBf
+            pct   = Math.max(0, Math.min(100, (dbf / 60) * 100));
+            label = dbf.toFixed(1) + ' dBf';
+        } else {
+            // Mode RTL-SDR — jauge -100..0 dBFS
+            const level = stats.current_level || -100;
+            pct   = Math.max(0, Math.min(100, level + 100));
+            label = level.toFixed(2) + ' dB';
+        }
+        document.getElementById('vu-meter-value-main').textContent = label;
         const bar = document.getElementById('vu-meter-bar-main');
         if (bar) {
-            bar.style.width = value + '%';
-            bar.style.background = dbValue > -3 ? '#ef4444' : dbValue > -10 ? '#f59e0b' : '#10b981';
+            bar.style.width = pct + '%';
+            bar.style.background = '#10b981';
         }
+        // SNR / Multipath / Offset affichés dans la section MPX uniquement
     }
 
     // =============================================
@@ -454,7 +464,9 @@
                 modEl.className = 'text-sm font-bold font-mono text-orange-500';
             }
 
-            updateVUMeter(levelPercent);
+            updateVUMeter(stats);
+            pushRealtimeLevel(smoothedLevel(stats.signal_dbf !== undefined ? stats.signal_dbf : level));
+            updateMPX(stats);
 
             const uptimeSeconds = stats.uptime || 0;
             const hours   = Math.floor(uptimeSeconds / 3600);
@@ -519,8 +531,8 @@
     // =============================================
     // GRAPHIQUE TEMPS RÉEL (30 secondes)
     // =============================================
-    const REALTIME_WINDOW   = 300;
-    const REALTIME_INTERVAL = 100;
+    const REALTIME_WINDOW   = 60;
+    const REALTIME_INTERVAL = 1000;
     let audioChart = null;
     let realtimeLabels = [];
     let realtimeData   = [];
@@ -533,25 +545,24 @@
             data: {
                 labels: realtimeLabels,
                 datasets: [{
-                    label: 'Niveau audio (dBFS)',
+                    label: 'Signal RF (dBf)',
                     data: realtimeData,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59,130,246,0.08)',
                     borderWidth: 1.5,
-                    pointRadius: 0,
-                    tension: 0.3,
-                    fill: true
+                        pointRadius: 0,
+                        tension: 0.5,
+                        fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false,
                 plugins: { legend: { display: false } },
                 scales: {
                     y: {
-                        title: { display: true, text: 'dBFS', font: { size: 10 } },
-                        ticks: { stepSize: 10, font: { size: 10 } },
+                        title: { display: true, text: 'dBf', font: { size: 10 } },
+                        ticks: { font: { size: 10 }, maxTicksLimit: 5 },
                         grid: { color: 'rgba(0,0,0,0.04)' }
                     },
                     x: {
@@ -572,10 +583,23 @@
         realtimeData.push(Math.round(levelDb * 10) / 10);
         if (realtimeLabels.length > REALTIME_WINDOW) { realtimeLabels.shift(); realtimeData.shift(); }
         if (audioChart && realtimeData.length > 0) {
-            const dMin = Math.min(...realtimeData), dMax = Math.max(...realtimeData), margin = 5;
-            audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
-            audioChart.options.scales.y.max = Math.min(0, Math.ceil((dMax + margin) / 10) * 10);
-            audioChart.update('none');
+            // Détecter le mode TEF : valeurs > 0 = dBf, sinon dBFS
+            const isTEF = realtimeData.some(v => v > 0);
+            if (isTEF) {
+                // Échelle adaptative ±1 dBf autour du signal reçu
+                const dMin = Math.min(...realtimeData);
+                const dMax = Math.max(...realtimeData);
+                const center = (dMin + dMax) / 2;
+                const halfRange = Math.max(1, (dMax - dMin) / 2 + 1);
+                audioChart.options.scales.y.min = Math.max(0,  Math.floor((center - halfRange) * 10) / 10);
+                audioChart.options.scales.y.max = Math.min(60, Math.ceil( (center + halfRange) * 10) / 10);
+            } else {
+                // Mode RTL-SDR : auto-scale -100..0
+                const dMin = Math.min(...realtimeData), dMax = Math.max(...realtimeData), margin = 5;
+                audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
+                audioChart.options.scales.y.max = Math.min(0, Math.ceil((dMax + margin) / 10) * 10);
+            }
+            audioChart.update({ duration: 800, easing: 'easeInOutQuad' });
         }
     }
 
@@ -583,6 +607,14 @@
     function loadAudioHistory() {}
     function updateHistoryChart() {}
     function updateDevMeter(deviationKhz) {}
+
+    // Buffer de lissage : moyenne sur 3 valeurs consécutives
+    let _smoothBuf = [];
+    function smoothedLevel(val) {
+        _smoothBuf.push(val);
+        if (_smoothBuf.length > 3) _smoothBuf.shift();
+        return _smoothBuf.reduce((a, b) => a + b, 0) / _smoothBuf.length;
+    }
 
     // =============================================
     // ANALYSE MPX
@@ -592,9 +624,47 @@
       const disMsg  = document.getElementById('mpx-disabled-msg');
       const badge   = document.getElementById('mpx-badge');
 
-      if (!enabled) {
-        if (disMsg) disMsg.classList.remove('hidden');
-        if (badge) { badge.textContent = 'OFF'; badge.className = 'text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-400'; }
+      // En mode TEF : signal_dbf présent mais pas de données MPX PCM
+      const isTEF = stats.signal_dbf !== undefined && stats.signal_dbf !== null;
+
+      if (!enabled || isTEF) {
+        if (isTEF) {
+          // Mode TEF : afficher ce que TEFAudioAnalyzer fournit
+          if (disMsg) { disMsg.classList.remove('hidden'); disMsg.textContent = 'Déviation/Pilote/RDS : non disponibles en mode TEF'; }
+
+          // L/R
+          _updateLR('left',  stats.level_left);
+          _updateLR('right', stats.level_right);
+
+          // Puissance audio
+          const power    = stats.mpx_power ?? -100;
+          const powerPct = Math.max(0, Math.min(100, (power + 50) / 50 * 100));
+          const powerBar = document.getElementById('mpx-power-bar');
+          const powerVal = document.getElementById('mpx-power-val');
+          if (powerBar) powerBar.style.width = powerPct + '%';
+          if (powerVal) powerVal.textContent  = power.toFixed(1) + ' dBFS';
+
+          // SNR audio
+          const snr    = stats.snr ?? 0;
+          const snrPct = Math.min((snr / 60) * 100, 100);
+          const snrVal = document.getElementById('mpx-val-snr');
+          const snrBar = document.getElementById('mpx-bar-snr');
+          if (snrVal) snrVal.textContent = snr.toFixed(0) + ' dB';
+          if (snrBar) { snrBar.style.width = snrPct + '%'; snrBar.style.background = snr >= 40 ? '#22c55e' : snr >= 25 ? '#f59e0b' : '#ef4444'; }
+
+          // Badge stéréo / mono (depuis flag MS du RDS groupe 0A)
+          if (badge) {
+            const badgeCls = 'text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ';
+            if (stats.stereo_present) {
+              badge.textContent = 'Stéréo'; badge.className = badgeCls + 'bg-green-100 text-green-700';
+            } else {
+              badge.textContent = 'Mono'; badge.className = badgeCls + 'bg-yellow-100 text-yellow-600';
+            }
+          }
+        } else {
+          if (disMsg) { disMsg.classList.remove('hidden'); disMsg.textContent = 'Analyse MPX désactivée'; }
+          if (badge) { badge.textContent = 'OFF'; badge.className = 'text-xs font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-400'; }
+        }
         return;
       }
       if (disMsg) disMsg.classList.add('hidden');
@@ -686,11 +756,9 @@
                     modEl.textContent = 'Absente'; modEl.className = 'text-sm font-bold font-mono text-orange-500';
                 }
 
-                updateVUMeter(levelPercent);
-                pushRealtimeLevel(level);
-                updateMPX(stats);
-
-                if (stats.ps && stats.ps !== '-') document.getElementById('rds-ps-display').textContent = stats.ps;
+                updateVUMeter(stats);
+                pushRealtimeLevel(smoothedLevel(stats.signal_dbf !== undefined ? stats.signal_dbf : (stats.current_level || -100)));
+                updateMPX(stats); document.getElementById('rds-ps-display').textContent = stats.ps;
                 if (stats.rt && stats.rt !== '-') document.getElementById('rds-rt-display').textContent = stats.rt;
 
                 const rdsDotSSE = document.getElementById('rds-status-dot');

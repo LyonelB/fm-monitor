@@ -1,0 +1,45 @@
+{
+  "station": {
+    "name": "Ma Radio",
+    "frequency": "88.6M",
+    "frequency_display": "88.6M"
+  },
+  "rtl_sdr": {
+    "frequency": "88.6M",
+    "sample_rate": "1140000",
+    "gain": "40",
+    "device_index": "0",
+    "ppm_error": 0
+  },
+  "tef": {
+    "enabled": false,
+    "serial_port": "/dev/ttyACM0",
+    "alsa_device": "hw:Tuner",
+    "signal_threshold_dbf": 20.0
+  },
+  "audio": {
+    "output_rate": "44100",
+    "silence_threshold": -20.0,
+    "silence_duration": 30,
+    "enabled": true,
+    "modulation_alert_delay": 30,
+    "modulation_std_threshold": 0.8,
+    "signal_lost_threshold": -30.0,
+    "deviation_alert_threshold": 80.0,
+    "deviation_alert_delay": 10,
+    "rds_timeout": 240
+  },
+  "email": {
+    "sender_email": "",
+    "sender_password": "",
+    "recipient_emails": [],
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "enabled": false,
+    "use_tls": true
+  },
+  "auth": {
+    "username": "admin",
+    "password_hash": ""
+  }
+}
