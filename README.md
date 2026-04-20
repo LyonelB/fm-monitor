@@ -112,7 +112,7 @@ Le script installe automatiquement toutes les dépendances, compile redsea, conf
 
 ### Prérequis système
 
-- Raspberry Pi 3/4/5 ou mini-PC Linux (Debian 12 / Ubuntu 22.04+)
+- Raspberry Pi 4/5 ou mini-PC Linux (**Raspberry Pi OS Lite 64-bit** / Debian 13 Trixie / Ubuntu 24.04+)
 - Python 3.11+
 - `rtl_fm`, `redsea`, `ffmpeg`, `icecast2`
 
