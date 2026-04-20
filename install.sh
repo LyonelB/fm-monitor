@@ -109,6 +109,7 @@ PACKAGES=(
     "openssl"
     "coreutils"
     "build-essential"
+    "libopenblas-dev"
     "meson"
     "ninja-build"
     "libsndfile1-dev"
@@ -237,20 +238,7 @@ print_step "Installation des packages Python..."
 
 pip install --quiet --upgrade pip setuptools wheel
 
-PYTHON_PACKAGES=(
-    "flask==3.0.0"
-    "numpy"
-    "requests"
-    "flask-bcrypt==1.0.1"
-    "Flask-Limiter==3.5.0"
-    "python-dotenv==1.0.0"
-    "Flask-WTF==1.2.1"
-)
-
-for package in "${PYTHON_PACKAGES[@]}"; do
-    print_info "Installation de $package..."
-    pip install --quiet "$package"
-done
+pip install --quiet -r requirements.txt
 
 deactivate
 
