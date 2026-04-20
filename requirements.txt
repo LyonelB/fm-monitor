@@ -8,3 +8,5 @@ email-validator==2.2.0
 gunicorn==25.1.0
 scipy==1.17.1
 flask-bcrypt==1.0.1
+python-dotenv==1.0.0
+numpy
