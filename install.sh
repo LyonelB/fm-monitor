@@ -110,6 +110,7 @@ PACKAGES=(
     "coreutils"
     "build-essential"
     "libopenblas-dev"
+    "libportaudio2"
     "meson"
     "ninja-build"
     "libsndfile1-dev"
