@@ -393,7 +393,8 @@ def test_email():
         if monitor and monitor.email_alert:
             success = monitor.email_alert.send_alert(
                 alert_type="Test",
-                details="Ceci est un email de test depuis FM Monitor."
+                details="Ceci est un email de test depuis FM Monitor.",
+                skip_cooldown=True
             )
             if success:
                 return jsonify({'status': 'success', 'message': 'Email envoyé'})
@@ -687,6 +688,77 @@ def record_status():
         recording = False
     return jsonify({'recording': recording, 'size': size, 'max': RECORD_MAX_BYTES})
 
+
+
+@app.route('/api/scan-dongle', methods=['POST'])
+@auth.login_required
+def scan_dongle():
+    """Détecte les dongles connectés : TEF (série) et/ou RTL-SDR."""
+    import glob, serial as _serial
+    result = {'tef': [], 'rtlsdr': False}
+
+    # Scan TEF sur ttyUSB* et ttyACM*
+    ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
+    for port in ports:
+        try:
+            s = _serial.Serial(port, 115200, timeout=2)
+            s.reset_input_buffer()
+            s.write(b'x')
+            import time; time.sleep(0.8)
+            data = s.read(200).decode('ascii', errors='ignore')
+            s.close()
+            if 'OK' in data or 'T8' in data or 'Ss' in data:
+                result['tef'].append(port)
+        except Exception:
+            pass
+
+    # Scan RTL-SDR
+    try:
+        r = subprocess.run(['rtl_test', '-t'], capture_output=True, text=True, timeout=5)
+        output = r.stdout + r.stderr
+        if 'Found' in output and ('R820' in output or 'RTL' in output):
+            result['rtlsdr'] = True
+    except Exception:
+        pass
+
+    return jsonify(result)
+
+
+@app.route('/api/select-source', methods=['POST'])
+@auth.login_required
+def select_source():
+    """Applique la source choisie (tef ou rtlsdr) et redémarre le service."""
+    data = request.get_json()
+    source = data.get('source')  # 'tef' ou 'rtlsdr'
+    port = data.get('port', '/dev/ttyUSB0')
+
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+
+        if source == 'tef':
+            if 'tef' not in config:
+                config['tef'] = {}
+            config['tef']['enabled'] = True
+            config['tef']['serial_port'] = port
+            config['tef'].setdefault('alsa_device', 'hw:Tuner')
+            config['tef'].setdefault('signal_threshold_dbf', 20.0)
+            config['tef'].setdefault('modulation_threshold_dbfs', -40.0)
+        else:
+            if 'tef' in config:
+                config['tef']['enabled'] = False
+
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+
+        # Redémarrage non-bloquant
+        subprocess.Popen(['sudo', 'systemctl', 'restart', 'fm-monitor'])
+        logger.info(f"Source sélectionnée : {source} ({port if source == 'tef' else 'RTL-SDR'})")
+        return jsonify({'status': 'success', 'source': source})
+
+    except Exception as e:
+        logger.error(f"Erreur select-source : {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # Démarrage du monitor (exécuté aussi bien par Gunicorn que par python app.py)
 try:
