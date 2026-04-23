@@ -12,6 +12,7 @@ import time
 import json
 import subprocess
 import os
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
@@ -46,6 +47,24 @@ limiter = Limiter(
 )
 
 auth = Auth()
+
+SESSION_TIMEOUT = timedelta(minutes=60)
+
+@app.before_request
+def check_session_timeout():
+    if request.endpoint in ('stream_stats', 'proxy_stream', 'static'):
+        return
+    if session.get('logged_in'):
+        last_active = session.get('last_active')
+        if last_active:
+            elapsed = datetime.utcnow() - datetime.fromisoformat(last_active)
+            if elapsed > SESSION_TIMEOUT:
+                session.clear()
+                if request.is_json:
+                    from flask import abort
+                    abort(401)
+                return redirect(url_for('login', timeout=1))
+        session['last_active'] = datetime.utcnow().isoformat()
 
 # Instance globale du moniteur
 monitor = None
@@ -87,9 +106,8 @@ def login():
         if auth.verify_credentials(username, password):
             session['logged_in'] = True
             session['username'] = username
-
-            if remember:
-                session.permanent = True
+            session['last_active'] = datetime.utcnow().isoformat()
+            session.permanent = True
 
             logger.info(f"Connexion réussie pour {username}")
 
@@ -786,6 +804,7 @@ if __name__ == '__main__':
             logger.info("   Pour activer HTTPS, générez les certificats avec: ./generate_ssl.sh")
             logger.info(f"Démarrage du serveur Flask en HTTP sur http://0.0.0.0:5000")
 
+        logging.getLogger('werkzeug').setLevel(logging.ERROR)
         app.run(
             host='0.0.0.0',
             port=5000,
