@@ -422,6 +422,15 @@ def test_email():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/signal/history')
+@auth.login_required
+@limiter.exempt
+def get_signal_history():
+    """Retourne les 60 dernières secondes de niveau RF"""
+    if monitor:
+        return jsonify(monitor.get_signal_history())
+    return jsonify([])
+
 @app.route('/api/audio/history')
 @auth.login_required
 @limiter.exempt  # Exemption rate limiting pour historique appelé fréquemment

@@ -798,11 +798,25 @@
         document.getElementById('current-date').textContent = now.toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     }
 
+    // Pré-chargement historique 60s pour le graphique RF
+    async function loadSignalHistory() {
+        try {
+            const res = await fetch('/api/signal/history');
+            if (!res.ok) return;
+            const history = await res.json();
+            if (!Array.isArray(history)) return;
+            history.forEach(p => realtimeData.push({ x: p.t, y: p.l }));
+            realtimeData.sort((a, b) => a.x - b.x);
+            if (audioChart && realtimeData.length > 0) audioChart.update('none');
+        } catch (e) { console.error('loadSignalHistory error:', e); }
+    }
+
     // Appels initiaux
     updateTime();
     loadConfig();
     updateStats();
     initRealtimeChart();
+    loadSignalHistory();
     connectSSE();
     setInterval(updateTime,   1000);
     setInterval(updateStats, 10000);

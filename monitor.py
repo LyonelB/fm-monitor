@@ -67,6 +67,8 @@ class FMMonitor:
 
         # Surveillance de la modulation
         self.level_history = collections.deque(maxlen=30)
+        # Historique 60s pour pré-chargement graphique au rechargement de page
+        self.signal_history = collections.deque(maxlen=240)  # 120s à 2/sec
         self.modulation_ok = True
         self.modulation_alert_sent = False
         self.no_modulation_start = None
@@ -791,7 +793,7 @@ class FMMonitor:
                 with self.stats_lock:
                     current_level = self.stats['current_level']
 
-                # Alimenter le buffer d'historique
+                # Alimenter le buffer d'historique modulation
                 self.level_history.append(current_level)
 
                 # ── 1. PERTE TOTALE DE L'ÉMETTEUR (porteuse absente) ──────────
@@ -1023,7 +1025,15 @@ class FMMonitor:
                     with self.stats_lock:
                         self.stats['uptime'] = int(uptime)
 
-                time.sleep(1)
+                # Historique signal RF : 2 samples/sec pour correspondre au graphique
+                time.sleep(0.5)
+                with self.stats_lock:
+                    mid_level = self.stats.get('signal_dbf') or self.stats['current_level']
+                self.add_signal_sample(mid_level)
+                time.sleep(0.5)
+                with self.stats_lock:
+                    end_level = self.stats.get('signal_dbf') or self.stats['current_level']
+                self.add_signal_sample(end_level)
 
             except Exception as e:
                 logger.error(f"Erreur surveillance: {e}")
@@ -1184,6 +1194,12 @@ class FMMonitor:
             stats['start_time'] = stats['start_time'].strftime('%d/%m/%Y %H:%M:%S')
 
         return stats
+
+    def add_signal_sample(self, level):
+        self.signal_history.append({'t': int(time.time() * 1000), 'l': round(level, 1)})
+
+    def get_signal_history(self):
+        return list(self.signal_history)
 
     def stop(self):
         """Arrête le moniteur"""
