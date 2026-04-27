@@ -401,7 +401,7 @@ rtl_test -t</pre>
 </main>
 
 <script>
-  fetch('/api/config/full').then(r => r.json()).then(config => {
+  fetch('/api/config/full', {credentials: 'include'}).then(r => r.json()).then(config => {
     const freq = config.rtl_sdr?.frequency || '88.6M';
     document.getElementById('sidebar-frequency').textContent = freq.replace('M', ' MHz');
   }).catch(() => {});

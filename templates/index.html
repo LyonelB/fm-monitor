@@ -448,7 +448,7 @@
 
     async function updateStats() {
         try {
-            const response = await fetch('/api/stats');
+            const response = await fetch('/api/stats', {credentials: 'include'});
             const stats = await response.json();
 
             const level = stats.current_level || -100;
@@ -803,7 +803,7 @@
     // Pré-chargement historique 60s pour le graphique RF
     async function loadSignalHistory() {
         try {
-            const res = await fetch('/api/signal/history');
+            const res = await fetch('/api/signal/history', {credentials: 'include'});
             if (!res.ok) return;
             const history = await res.json();
             if (!Array.isArray(history)) return;
@@ -844,7 +844,7 @@
 
     async function startRecord() {
         try {
-            const res  = await fetch('/api/record/start', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()} });
+            const res  = await fetch('/api/record/start', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()}, credentials: 'include' });
             const data = await res.json();
             if (data.status === 'ok') {
                 isRecording  = true;
@@ -860,7 +860,7 @@
     async function stopRecord() {
         clearInterval(recInterval);
         try {
-            const res  = await fetch('/api/record/stop', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()} });
+            const res  = await fetch('/api/record/stop', { method:'POST', headers:{'X-CSRFToken': await getCsrfToken()}, credentials: 'include' });
             const data = await res.json();
             if (data.status === 'ok') { resetRecBtn(); window.location.href = '/api/record/download'; }
             else { alert('Erreur : ' + data.message); resetRecBtn(); }
@@ -869,7 +869,7 @@
 
     async function updateRecStatus() {
         try {
-            const res  = await fetch('/api/record/status');
+            const res  = await fetch('/api/record/status', {credentials: 'include'});
             const data = await res.json();
             if (!data.recording) { clearInterval(recInterval); resetRecBtn(); window.location.href = '/api/record/download'; return; }
             const pct     = Math.min(100, (data.size / data.max) * 100);
@@ -893,7 +893,7 @@
     }
 
     async function getCsrfToken() {
-        const res  = await fetch('/api/csrf-token');
+        const res  = await fetch('/api/csrf-token', {credentials: 'include'});
         const data = await res.json();
         return data.csrf_token;
     }

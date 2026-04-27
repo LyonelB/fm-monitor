@@ -445,7 +445,7 @@
   // ═══════════════════════════════════════════════
   async function loadConfig() {
     try {
-      const response = await fetch('/api/config/full');
+      const response = await fetch('/api/config/full', {credentials: 'include'});
       const config   = await response.json();
 
       const frequency   = config.rtl_sdr?.frequency || config.station?.frequency || '';
@@ -502,7 +502,7 @@
     btn.disabled = true;
     result.className = 'text-xs hidden';
     try {
-      const resp = await fetch('/api/test-email', {
+      const resp = await fetch('/api/test-email', {credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
       });
@@ -589,7 +589,7 @@
     label.textContent = 'Enregistrement…';
 
     try {
-      const resp   = await fetch('/api/config/save', {
+      const resp   = await fetch('/api/config/save', {credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
         body: JSON.stringify(config)
@@ -602,7 +602,7 @@
 
         setTimeout(async () => {
           try {
-            const restartResp = await fetch('/api/restart', {
+            const restartResp = await fetch('/api/restart', {credentials: 'include', 
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
             });
@@ -658,7 +658,7 @@
     formData.append('file', file);
 
     try {
-      const resp = await fetch('/api/config/import', { method: 'POST', body: formData });
+      const resp = await fetch('/api/config/import', { method: 'POST', body: formData, credentials: 'include' });
       const data = await resp.json();
       if (data.success) {
         result.textContent = `✓ Restauré (v${data.version} — ${data.date?.slice(0,10)})`;
@@ -697,7 +697,7 @@
       status.textContent = 'Application…';
       status.className   = 'text-xs text-orange-500 w-16 text-right';
       try {
-        const resp = await fetch('/api/volume/set', {
+        const resp = await fetch('/api/volume/set', {credentials: 'include', 
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
           body: JSON.stringify({ volume: parseInt(val) })
@@ -720,7 +720,7 @@
 
   async function loadVolume() {
     try {
-      const resp = await fetch('/api/volume');
+      const resp = await fetch('/api/volume', {credentials: 'include'});
       const data = await resp.json();
       if (data.status === 'success') {
         document.getElementById('dac-volume').value = data.volume;
@@ -737,7 +737,7 @@
   async function restartMonitoring() {
     if (!confirm('Êtes-vous sûr de vouloir redémarrer le monitoring ?')) return;
     try {
-      const resp = await fetch('/api/restart', {
+      const resp = await fetch('/api/restart', {credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }
       });
@@ -771,9 +771,9 @@
     results.classList.add('hidden');
 
     try {
-      const csrfResp = await fetch('/api/csrf-token');
+      const csrfResp = await fetch('/api/csrf-token', {credentials: 'include'});
       const { csrf_token } = await csrfResp.json();
-      const resp = await fetch('/api/scan-dongle', {
+      const resp = await fetch('/api/scan-dongle', {credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token }
       });
@@ -835,13 +835,13 @@
   }
 
   async function selectSource(source, port) {
-    const csrfResp = await fetch('/api/csrf-token');
+    const csrfResp = await fetch('/api/csrf-token', {credentials: 'include'});
     const { csrf_token } = await csrfResp.json();
     try {
-      const resp = await fetch('/api/select-source', {
+      const resp = await fetch('/api/select-source', {credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
-        body: JSON.stringify({ source, port })
+        body: JSON.stringify({ source, port , credentials: 'include'})
       });
       const data = await resp.json();
       if (data.status === 'success') {

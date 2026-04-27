@@ -143,7 +143,7 @@
   // ═══════════════════════════════════════════════
   async function updateStats() {
     try {
-      const response = await fetch('/api/stats');
+      const response = await fetch('/api/stats', {credentials: 'include'});
       const stats = await response.json();
       const uptimeSeconds = stats.uptime || 0;
       const hours   = Math.floor(uptimeSeconds / 3600);
@@ -159,7 +159,7 @@
   // ═══════════════════════════════════════════════
   async function loadAlertsHistory() {
     try {
-      const response = await fetch('/api/alerts/history/grouped');
+      const response = await fetch('/api/alerts/history/grouped', {credentials: 'include'});
       const data = await response.json();
 
       if (data.status === 'success' && data.data) {
@@ -230,7 +230,7 @@
   // ═══════════════════════════════════════════════
   async function loadLogs() {
     try {
-      const response = await fetch('/api/logs');
+      const response = await fetch('/api/logs', {credentials: 'include'});
       const data = await response.json();
       if (data.logs) {
         const logContainer = document.getElementById('log-container');
@@ -252,7 +252,7 @@
   // ═══════════════════════════════════════════════
   async function updateSidebarFrequency() {
     try {
-      const response = await fetch('/api/config/full');
+      const response = await fetch('/api/config/full', {credentials: 'include'});
       const config   = await response.json();
       const freq     = config.rtl_sdr?.frequency || '88.6M';
       document.getElementById('sidebar-frequency').textContent = freq.replace('M', ' MHz');
