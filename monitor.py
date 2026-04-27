@@ -43,6 +43,8 @@ class FMMonitor:
         self.audio_config = self.config['audio']
         self.tef_config = self.config.get('tef', {})
         self.use_tef = self.tef_config.get('enabled', False)
+        decoder = self.config.get('decoder', 'rtl_fm')
+        self.use_gnuradio = (decoder == 'gnuradio') and not self.use_tef
         self.tef_driver = None
 
         # En mode TEF : remplacer MPXAnalyzer par TEFAudioAnalyzer
@@ -229,6 +231,9 @@ class FMMonitor:
             if self.use_tef:
                 # ── Mode TEF668X ──────────────────────────────────────────────
                 self._start_tef_mode()
+            elif self.use_gnuradio:
+                # ── Mode GNU Radio (stéréo WFM) ──────────────────────────────
+                self._start_gnuradio_mode()
             else:
                 # ── Mode RTL-SDR (original) ───────────────────────────────────
                 fifo_path = '/tmp/fm_stream.mp3'
@@ -605,6 +610,142 @@ class FMMonitor:
             self.stats['stereo_present'] = is_stereo
 
     # ══════════════════════════════════════════════════════════════════
+
+
+    def _start_gnuradio_mode(self):
+        """Initialise le mode GNU Radio : stéréo WFM + RDS via FIFO."""
+        import os
+        RDS_FIFO = '/tmp/rds_gnuradio.pcm'
+        if os.path.exists(RDS_FIFO):
+            os.remove(RDS_FIFO)
+        os.mkfifo(RDS_FIFO)
+        logger.info("Mode GNU Radio : FIFO RDS créé")
+
+        self.master_thread = threading.Thread(
+            target=self._master_monitor_gnuradio, daemon=True, name='gnuradio-audio'
+        )
+        self.master_thread.start()
+
+        self.redsea_gnuradio_thread = threading.Thread(
+            target=self._redsea_gnuradio, daemon=True, name='gnuradio-rds'
+        )
+        self.redsea_gnuradio_thread.start()
+
+        if self.rds_enabled:
+            self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
+            self.rds_thread.start()
+
+        logger.info("Mode GNU Radio démarré")
+
+    def _master_monitor_gnuradio(self):
+        """
+        Lance wfm_stereo.py | ffmpeg → Icecast
+        Calcule aussi le RMS depuis stdout pour le VU-mètre.
+        """
+        import os
+        import numpy as np
+
+        freq_mhz = self.rtl_config['frequency'].replace('M', '').replace('m', '')
+        gain     = self.rtl_config['gain']
+        ppm      = self.rtl_config['ppm_error']
+        output_rate = self.audio_config.get('output_rate', '44100')
+        script   = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wfm_stereo.py')
+
+        cmd = (
+            f"python3 {script} {freq_mhz} {gain} {ppm} | "
+            f"tee >(ffmpeg -f s16le -ar 48000 -ac 2 -i - "
+            f"-codec:a libmp3lame -b:a 128k -ar {output_rate} -ac 2 "
+            f"-content_type audio/mpeg -f mp3 "
+            f"icecast://source:fmmonitor2026@localhost:8000/fmmonitor 2>/dev/null) | cat"
+        )
+
+        logger.info("GNU Radio : lancement wfm_stereo.py | ffmpeg → Icecast")
+
+        try:
+            self.master_process = subprocess.Popen(
+                cmd,
+                shell=True,
+                executable='/bin/bash',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0
+            )
+
+            chunk_size = 4096  # 4096 shorts = 2 canaux × 2048 frames
+
+            while self.running and self.master_process.poll() is None:
+                chunk = self.master_process.stdout.read(chunk_size)
+                if not chunk:
+                    break
+
+                if not self.vu_meter_enabled:
+                    continue
+
+                try:
+                    samples = np.frombuffer(chunk, dtype=np.int16)
+                    if len(samples) < 10:
+                        continue
+
+                    # Stéréo interleaved → L pair, R impair
+                    stereo = samples.reshape(-1, 2).astype(np.float32)
+                    rms_l  = np.sqrt(np.mean(np.square(stereo[:, 0])))
+                    rms_r  = np.sqrt(np.mean(np.square(stereo[:, 1])))
+                    db_l   = 20 * np.log10(rms_l / 32768.0) if rms_l > 0 else -100.0
+                    db_r   = 20 * np.log10(rms_r / 32768.0) if rms_r > 0 else -100.0
+                    db     = (db_l + db_r) / 2.0
+
+                    with self.stats_lock:
+                        self.stats['current_level']     = float(db)
+                        self.stats['level_left']        = float(db_l)
+                        self.stats['level_right']       = float(db_r)
+                        self.stats['modulation_active'] = bool(db > -60.0)
+
+                    if self.mpx_enabled:
+                        self.mpx_analyzer.process_chunk(samples[::2])  # canal L seul
+
+                    if self.history_enabled and time.time() - self.last_db_save >= 5:
+                        try:
+                            self.db_queue.put_nowait({'level': float(db), 'signal_ok': self.signal_ok})
+                            self.last_db_save = time.time()
+                        except Exception:
+                            pass
+
+                except Exception as e:
+                    logger.error(f"GNU Radio RMS: {e}")
+
+        except Exception as e:
+            logger.error(f"Erreur GNU Radio audio: {e}")
+        finally:
+            if self.master_process:
+                self.master_process.kill()
+
+    def _redsea_gnuradio(self):
+        """
+        Lance redsea en lisant depuis le FIFO MPX GNU Radio.
+        Écrit dans /tmp/rds_output.json — compatible avec _rds_reader().
+        """
+        RDS_FIFO = '/tmp/rds_gnuradio.pcm'
+        rds_json = '/tmp/rds_output.json'
+
+        # Attendre que le FIFO soit prêt
+        import os
+        while not os.path.exists(RDS_FIFO):
+            time.sleep(0.2)
+        time.sleep(1)  # laisser GNU Radio démarrer
+
+        cmd = f"redsea -p -r 240000 < {RDS_FIFO} > {rds_json}"
+        logger.info("GNU Radio RDS : lancement redsea -r 240000")
+
+        try:
+            self.redsea_process = subprocess.Popen(
+                cmd,
+                shell=True,
+                executable='/bin/bash',
+                stderr=subprocess.PIPE
+            )
+            self.redsea_process.wait()
+        except Exception as e:
+            logger.error(f"Erreur redsea GNU Radio: {e}")
 
     def _stream_monitor(self):
         """Lit /tmp/fm_stream.mp3 et le met dans la queue"""
@@ -1233,6 +1374,10 @@ class FMMonitor:
             self.mpx_analyzer.stop()
 
         os.system("pkill -9 rtl_fm 2>/dev/null")
+        os.system("pkill -9 -f wfm_stereo.py 2>/dev/null")
+        if hasattr(self, 'redsea_process') and self.redsea_process:
+            try: self.redsea_process.kill()
+            except: pass
         os.system("pkill -9 sox 2>/dev/null")
         os.system("pkill -9 ffmpeg 2>/dev/null")
         os.system("pkill -9 redsea 2>/dev/null")
