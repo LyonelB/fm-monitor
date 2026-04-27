@@ -4,6 +4,40 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+## [0.6.0] - 2026-04-27
+
+### 🎉 Mode GNU Radio WFM stéréo
+
+#### Nouveau décodeur GNU Radio
+- **`wfm_stereo.py`** : démodulation WFM stéréo complète via GNU Radio + gr-osmosdr
+  - Branche A : audio stéréo S16LE 48 kHz → ffmpeg → Icecast (vraie stéréo L/R)
+  - Branche B : MPX démodulé mono 240 kHz → FIFO → redsea → RDS JSON
+  - Déemphasis 50 µs Europe intégré (`wfm_rcv_pll`)
+- **Sélection du décodeur** dans `config.json` : `"decoder": "rtl_fm"` ou `"gnuradio"`
+- **Toggle UI** dans la page Configuration → Scan dongle : boutons `rtl_fm (mono)` et `GNU Radio (stéréo)`
+- **VU-mètre L/R séparés** : calcul RMS indépendant sur canaux gauche et droit (`level_left`, `level_right`)
+
+#### Dépendances ajoutées
+- `gnuradio` + `gr-osmosdr` : `sudo apt install gnuradio gr-osmosdr`
+
+### 🛠️ Corrections
+
+- **Alertes ouvertes au redémarrage** : clôture automatique des alertes `signal_lost`, `no_modulation`, `rds_lost` sans rétablissement lors du redémarrage du service (`database.py` → `close_open_alerts()`)
+- **Auto-stop player** : arrêt automatique du player audio après 15 minutes
+- **Session timeout** : ajout de `credentials: 'include'` sur tous les appels `fetch()` des templates — le timeout 60 min est maintenant opérationnel
+- **datetime.utcnow() deprecation** : migration vers `datetime.now(timezone.utc)` dans `app.py`
+- **smtp_server corrompu** : valeur `config.json` nettoyée (`smtp.gmail.com`)
+
+### ⚙️ Configuration
+
+Nouveau paramètre dans `config.json` :
+```json
+"decoder": "gnuradio"
+```
+Valeurs : `"rtl_fm"` (défaut, mono) ou `"gnuradio"` (stéréo WFM)
+
+[0.6.0]: https://github.com/LyonelB/fm-monitor/compare/v0.5.2...v0.6.0
+
 ## [0.5.2] - 2026-04-10
 ### 🎉 Support TEF668X Headless USB Tuner
 #### Nouveau matériel supporté
