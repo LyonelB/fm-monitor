@@ -408,12 +408,14 @@
             isPlaying = true;
             playButton.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>';
             playButton.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-50');
+            // Auto-stop après 15 minutes
+            if (playerTimer) clearTimeout(playerTimer);
+            playerTimer = setTimeout(() => {
+                stopPlayer();
+                console.log('Player arrêté automatiquement après 15 minutes');
+            }, PLAYER_TIMEOUT);
         } else {
-            audioPlayer.pause();
-            audioPlayer.src = '';
-            isPlaying = false;
-            playButton.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-            playButton.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-50');
+            stopPlayer();
         }
     });
 
