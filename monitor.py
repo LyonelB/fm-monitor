@@ -728,42 +728,24 @@ class FMMonitor:
         """
         RDS_FIFO = '/tmp/rds_gnuradio.pcm'
         rds_json = '/tmp/rds_output.json'
-
-        # Attendre que le FIFO soit prêt
         import os
+
+        # Attendre que le FIFO existe
         while not os.path.exists(RDS_FIFO):
             time.sleep(0.2)
 
-        # Attendre que GNU Radio écrive dans le FIFO (max 30s)
-        logger.info("GNU Radio RDS : attente données FIFO MPX...")
-        deadline = time.time() + 30
-        fifo_ready = False
-        while time.time() < deadline:
-            try:
-                fd = os.open(RDS_FIFO, os.O_RDONLY | os.O_NONBLOCK)
-                data = os.read(fd, 1)
-                os.close(fd)
-                if data:
-                    fifo_ready = True
-                    break
-            except (BlockingIOError, OSError):
-                pass
-            time.sleep(0.5)
-
-        if not fifo_ready:
-            logger.warning("GNU Radio RDS : timeout 30s — lancement redsea quand même")
-        else:
-            logger.info("GNU Radio RDS : FIFO MPX actif, lancement redsea")
-
-        cmd = f"redsea -p -r 240000 < {RDS_FIFO} > {rds_json}"
-        logger.info("GNU Radio RDS : lancement redsea -r 240000")
-
+        logger.info("GNU Radio RDS : ouverture FIFO MPX (attente GNU Radio)...")
         try:
+            # open() bloque naturellement jusqu'à ce que GNU Radio ouvre le write end
+            fifo_in = open(RDS_FIFO, "rb")
+            rds_out  = open(rds_json, "wb", buffering=0)
+            cmd = ["stdbuf", "-oL", "redsea", "-p", "-r", "171428"]
+            logger.info("GNU Radio RDS : lancement redsea -r 171428")
             self.redsea_process = subprocess.Popen(
                 cmd,
-                shell=True,
-                executable='/bin/bash',
-                stderr=subprocess.PIPE
+                stdin=fifo_in,
+                stdout=rds_out,
+                stderr=subprocess.DEVNULL
             )
             self.redsea_process.wait()
         except Exception as e:
