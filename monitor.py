@@ -222,6 +222,8 @@ class FMMonitor:
             logger.warning("Le moniteur est déjà en cours d'exécution")
             return
 
+        # Clôturer les alertes ouvertes d'une session précédente
+        self.db.close_open_alerts()
         logger.info(f"Démarrage de la surveillance FM sur {self.rtl_config['frequency']}")
         self.running = True
         self.stats['start_time'] = datetime.now()

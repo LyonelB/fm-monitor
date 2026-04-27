@@ -246,6 +246,60 @@ class FMDatabase:
             logger.error(f"Erreur récupération alertes groupées: {e}")
             return []
     
+
+    def close_open_alerts(self):
+        """
+        Clôture les alertes ouvertes au redémarrage du service.
+        Insère un événement _restored pour chaque alerte _lost sans rétablissement.
+        """
+        ALERT_PAIRS = {
+            'signal_lost':   'signal_restored',
+            'no_modulation': 'modulation_restored',
+            'rds_lost':      'rds_restored',
+        }
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT timestamp, alert_type, level_db
+                    FROM alerts
+                    ORDER BY timestamp DESC
+                    LIMIT 100
+                ''')
+                alerts = [dict(row) for row in cursor.fetchall()]
+
+                # Chercher les alertes ouvertes (lost sans restored qui suit)
+                closed = 0
+                for i, alert in enumerate(alerts):
+                    atype = alert['alert_type']
+                    if atype not in ALERT_PAIRS:
+                        continue
+                    restore_type = ALERT_PAIRS[atype]
+                    # Vérifier si un restored existe après (= plus tôt dans la liste DESC)
+                    already_restored = any(
+                        a['alert_type'] == restore_type
+                        for a in alerts[:i]
+                    )
+                    if not already_restored:
+                        cursor.execute('''
+                            INSERT INTO alerts (timestamp, alert_type, level_db,
+                                duration_seconds, message, email_sent)
+                            VALUES (datetime('now', 'localtime'), ?, ?, 0, ?, 0)
+                        ''', (
+                            restore_type,
+                            alert['level_db'],
+                            f"Clôturé automatiquement au redémarrage du service"
+                        ))
+                        closed += 1
+                        logger.info(f"Alerte {atype} clôturée au redémarrage → {restore_type}")
+
+                if closed:
+                    logger.info(f"{closed} alerte(s) ouverte(s) clôturée(s) au redémarrage")
+                return closed
+        except Exception as e:
+            logger.error(f"Erreur close_open_alerts: {e}")
+            return 0
+
     def cleanup_old_data(self, days=7):
         """Nettoie les données de plus de X jours"""
         try:
