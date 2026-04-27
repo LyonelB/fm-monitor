@@ -793,9 +793,18 @@
       } else if (!hasTef && hasRtl) {
         found.innerHTML = `
           <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 mb-3">
-            RTL-SDR Blog V4 détecté — source unique, sélection automatique.
+            RTL-SDR Blog V4 détecté. Choisissez le décodeur :
+          </div>
+          <div class="flex gap-3">
+            <button onclick="selectSource('rtlsdr', '')" class="btn-secondary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+              rtl_fm (mono)
+            </button>
+            <button onclick="selectSource('gnuradio', '')" class="btn-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+              GNU Radio (stéréo)
+            </button>
           </div>`;
-        selectSource('rtlsdr', '');
       } else {
         // Les deux sont détectés — choix proposé
         found.innerHTML = `
@@ -836,7 +845,7 @@
       });
       const data = await resp.json();
       if (data.status === 'success') {
-        const label = source === 'tef' ? 'TEF (' + port + ')' : 'RTL-SDR Blog V4';
+        const label = source === 'tef' ? 'TEF (' + port + ')' : source === 'gnuradio' ? 'GNU Radio (stéréo)' : 'RTL-SDR Blog V4 (rtl_fm)';
         showToast('Source ' + label + ' activée — redémarrage en cours…', 'success');
         document.getElementById('scan-found').innerHTML += `
           <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">

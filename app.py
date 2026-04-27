@@ -12,7 +12,7 @@ import time
 import json
 import subprocess
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
@@ -57,14 +57,14 @@ def check_session_timeout():
     if session.get('logged_in'):
         last_active = session.get('last_active')
         if last_active:
-            elapsed = datetime.now(datetime.UTC) - datetime.fromisoformat(last_active).replace(tzinfo=datetime.UTC)
+            elapsed = datetime.now(timezone.utc) - datetime.fromisoformat(last_active).replace(tzinfo=timezone.utc)
             if elapsed > SESSION_TIMEOUT:
                 session.clear()
                 if request.is_json:
                     from flask import abort
                     abort(401)
                 return redirect(url_for('login', timeout=1))
-        session['last_active'] = datetime.now(datetime.UTC).isoformat()
+        session['last_active'] = datetime.now(timezone.utc).isoformat()
 
 # Instance globale du moniteur
 monitor = None
@@ -106,7 +106,7 @@ def login():
         if auth.verify_credentials(username, password):
             session['logged_in'] = True
             session['username'] = username
-            session['last_active'] = datetime.now(datetime.UTC).isoformat()
+            session['last_active'] = datetime.now(timezone.utc).isoformat()
             session.permanent = True
 
             logger.info(f"Connexion réussie pour {username}")
@@ -771,9 +771,15 @@ def select_source():
             config['tef'].setdefault('alsa_device', 'hw:Tuner')
             config['tef'].setdefault('signal_threshold_dbf', 20.0)
             config['tef'].setdefault('modulation_threshold_dbfs', -40.0)
+            config['decoder'] = 'rtl_fm'
+        elif source == 'gnuradio':
+            if 'tef' in config:
+                config['tef']['enabled'] = False
+            config['decoder'] = 'gnuradio'
         else:
             if 'tef' in config:
                 config['tef']['enabled'] = False
+            config['decoder'] = 'rtl_fm' 
 
         with open('config.json', 'w') as f:
             json.dump(config, f, indent=2)
