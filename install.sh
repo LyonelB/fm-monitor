@@ -152,6 +152,32 @@ else
     fi
 fi
 
+
+# =============================================
+# 5b. INSTALLATION DE GNU RADIO (décodeur stéréo)
+# =============================================
+print_step "Installation de GNU Radio (démodulation WFM stéréo)..."
+
+GNR_PACKAGES=("gnuradio" "gr-osmosdr" "libfftw3-dev" "libsamplerate0-dev" "cmake")
+for package in "${GNR_PACKAGES[@]}"; do
+    if dpkg -l 2>/dev/null | grep -q "^ii  $package "; then
+        print_info "$package déjà installé"
+    else
+        print_info "Installation de $package..."
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y -qq "$package"
+    fi
+done
+
+# Compiler csdr HA7ILM (optionnel, pour usage futur)
+# Non requis pour le mode GNU Radio actuel
+
+if python3 -c "import gnuradio" 2>/dev/null && python3 -c "import osmosdr" 2>/dev/null; then
+    GNR_VER=$(python3 -c "import gnuradio; print(gnuradio.__version__)" 2>/dev/null || echo "inconnu")
+    print_info "GNU Radio $GNR_VER + gr-osmosdr installés ✓"
+else
+    print_warning "GNU Radio installé mais import Python échoue — mode rtl_fm utilisé par défaut"
+fi
+
 # =============================================
 # 6. CONFIGURATION ICECAST2
 # =============================================

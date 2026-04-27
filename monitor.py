@@ -733,7 +733,27 @@ class FMMonitor:
         import os
         while not os.path.exists(RDS_FIFO):
             time.sleep(0.2)
-        time.sleep(1)  # laisser GNU Radio démarrer
+
+        # Attendre que GNU Radio écrive dans le FIFO (max 30s)
+        logger.info("GNU Radio RDS : attente données FIFO MPX...")
+        deadline = time.time() + 30
+        fifo_ready = False
+        while time.time() < deadline:
+            try:
+                fd = os.open(RDS_FIFO, os.O_RDONLY | os.O_NONBLOCK)
+                data = os.read(fd, 1)
+                os.close(fd)
+                if data:
+                    fifo_ready = True
+                    break
+            except (BlockingIOError, OSError):
+                pass
+            time.sleep(0.5)
+
+        if not fifo_ready:
+            logger.warning("GNU Radio RDS : timeout 30s — lancement redsea quand même")
+        else:
+            logger.info("GNU Radio RDS : FIFO MPX actif, lancement redsea")
 
         cmd = f"redsea -p -r 240000 < {RDS_FIFO} > {rds_json}"
         logger.info("GNU Radio RDS : lancement redsea -r 240000")
