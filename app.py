@@ -57,14 +57,14 @@ def check_session_timeout():
     if session.get('logged_in'):
         last_active = session.get('last_active')
         if last_active:
-            elapsed = datetime.utcnow() - datetime.fromisoformat(last_active)
+            elapsed = datetime.now(datetime.UTC) - datetime.fromisoformat(last_active).replace(tzinfo=datetime.UTC)
             if elapsed > SESSION_TIMEOUT:
                 session.clear()
                 if request.is_json:
                     from flask import abort
                     abort(401)
                 return redirect(url_for('login', timeout=1))
-        session['last_active'] = datetime.utcnow().isoformat()
+        session['last_active'] = datetime.now(datetime.UTC).isoformat()
 
 # Instance globale du moniteur
 monitor = None
@@ -106,7 +106,7 @@ def login():
         if auth.verify_credentials(username, password):
             session['logged_in'] = True
             session['username'] = username
-            session['last_active'] = datetime.utcnow().isoformat()
+            session['last_active'] = datetime.now(datetime.UTC).isoformat()
             session.permanent = True
 
             logger.info(f"Connexion réussie pour {username}")
