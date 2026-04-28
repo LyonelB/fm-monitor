@@ -23,7 +23,12 @@ class WFMStereo(gr.top_block):
         self.src = osmosdr.source(args="numchan=1 rtl=0")
         self.src.set_sample_rate(samp_rate)
         self.src.set_center_freq(freq)
-        self.src.set_gain(gain)
+        # gain 'auto' ou -1 → AGC activé via set_gain_mode
+        if str(gain).strip() in ('auto', '-1', 'AUTO'):
+            self.src.set_gain_mode(True, 0)  # AGC hardware
+        else:
+            self.src.set_gain_mode(False, 0)
+            self.src.set_gain(float(gain), 0)
         self.src.set_freq_corr(ppm)
 
         # ── Branche A : WFM stéréo → stdout ──────────────────────────
