@@ -807,6 +807,38 @@ def select_source():
         logger.error(f"Erreur select-source : {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+@app.route('/api/wifi/status')
+@auth.login_required
+def wifi_status():
+    """Retourne l'état du WiFi système"""
+    try:
+        result = subprocess.run(['nmcli', 'radio', 'wifi'],
+            capture_output=True, text=True, timeout=5)
+        enabled = result.stdout.strip() == 'enabled'
+        return jsonify({'enabled': enabled})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/wifi/toggle', methods=['POST'])
+@auth.login_required
+@csrf.exempt
+def wifi_toggle():
+    """Active ou désactive le WiFi système"""
+    try:
+        data = request.get_json()
+        enable = data.get('enable', True)
+        action = 'on' if enable else 'off'
+        result = subprocess.run(['sudo', 'nmcli', 'radio', 'wifi', action],
+            capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            logger.info(f"WiFi {'activé' if enable else 'désactivé'}")
+            return jsonify({'status': 'success', 'enabled': enable})
+        else:
+            return jsonify({'status': 'error', 'message': result.stderr.strip()}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # Démarrage du monitor (exécuté aussi bien par Gunicorn que par python app.py)
 try:
     cleanup_orphan_records()

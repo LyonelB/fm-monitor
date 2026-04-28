@@ -251,7 +251,18 @@
 
       <div class="border-t border-gray-100 pt-4">
         <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">WiFi</div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="toggle-wrap mb-4">
+          <div>
+            <div class="text-xs font-semibold text-gray-700">WiFi système</div>
+            <div class="text-xs text-gray-400 mt-0.5">Activer ou désactiver la radio WiFi</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="wifi-toggle" class="sr-only peer">
+            <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+            <span class="ml-2 text-xs font-medium text-gray-700" id="wifi-toggle-label">Chargement...</span>
+          </label>
+        </div>
+        <div id="wifi-credentials" class="grid grid-cols-2 gap-4">
           <div>
             <div class="field-label">SSID (nom du réseau)</div>
             <input type="text" id="wifi-ssid" class="field-input" placeholder="MonReseauWiFi">
@@ -754,6 +765,59 @@
   }
 
   // ═══════════════════════════════════════════════
+
+  // ── WiFi Toggle ────────────────────────────────────────────
+  async function loadWifiStatus() {
+    try {
+      const resp = await fetch('/api/wifi/status', {credentials: 'include'});
+      const data = await resp.json();
+      const toggle = document.getElementById('wifi-toggle');
+      const label  = document.getElementById('wifi-toggle-label');
+      if (toggle && label) {
+        toggle.checked = data.enabled;
+        label.textContent = data.enabled ? 'Activé' : 'Désactivé';
+      }
+    } catch(e) {
+      const label = document.getElementById('wifi-toggle-label');
+      if (label) label.textContent = 'Indisponible';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadWifiStatus();
+    const toggle = document.getElementById('wifi-toggle');
+    if (toggle) {
+      toggle.addEventListener('change', async () => {
+        const enable = toggle.checked;
+        const label  = document.getElementById('wifi-toggle-label');
+        try {
+          const csrfResp = await fetch('/api/csrf-token', {credentials: 'include'});
+          const { csrf_token } = await csrfResp.json();
+          const resp = await fetch('/api/wifi/toggle', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf_token},
+            body: JSON.stringify({enable})
+          });
+          const data = await resp.json();
+          if (data.status === 'success') {
+            label.textContent = enable ? 'Activé' : 'Désactivé';
+            const creds = document.getElementById('wifi-credentials');
+            if (creds) creds.style.display = enable ? '' : 'none';
+            showToast('WiFi ' + (enable ? 'activé' : 'désactivé'), 'success');
+          } else {
+            toggle.checked = !enable;
+            label.textContent = !enable ? 'Activé' : 'Désactivé';
+            showToast('Erreur WiFi : ' + data.message, 'error');
+          }
+        } catch(e) {
+          toggle.checked = !enable;
+          showToast('Erreur WiFi : ' + e.message, 'error');
+        }
+      });
+    }
+  });
+
   // INIT
   // ═══════════════════════════════════════════════
   loadConfig();
