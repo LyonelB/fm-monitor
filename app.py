@@ -52,7 +52,21 @@ SESSION_TIMEOUT = timedelta(minutes=60)
 
 @app.before_request
 def check_session_timeout():
-    if request.endpoint in ('stream_stats', 'proxy_stream', 'static'):
+    # Endpoints exclus du check session (polling automatique)
+    POLLING_ENDPOINTS = ('stream_stats', 'proxy_stream', 'static',
+                         'get_stats', 'get_signal_history', 'get_record_status')
+    if request.endpoint in POLLING_ENDPOINTS:
+        # Vérifier expiration mais NE PAS mettre à jour last_active
+        if session.get('logged_in'):
+            last_active = session.get('last_active')
+            if last_active:
+                elapsed = datetime.now(timezone.utc) - datetime.fromisoformat(last_active).replace(tzinfo=timezone.utc)
+                if elapsed > SESSION_TIMEOUT:
+                    session.clear()
+                    if request.is_json:
+                        from flask import abort
+                        abort(401)
+                    return redirect(url_for('login', timeout=1))
         return
     if session.get('logged_in'):
         last_active = session.get('last_active')
