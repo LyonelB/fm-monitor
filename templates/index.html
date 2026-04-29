@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>FM Monitor — Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com">
+    // =============================================
+    // SPECTRE MPX
+    // =============================================
+</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <style>
@@ -189,31 +193,20 @@
             <span>0</span><span>15</span><span>30</span><span>45</span><span>60 dBf</span>
           </div>
           <!-- SNR + Multipath en ligne sous la barre -->
-          <!-- Niveaux L / R -->
-          <div class="mb-1.5">
-            <div class="flex justify-between items-baseline mb-0.5">
-              <span class="text-xs font-semibold text-gray-600">L</span>
-              <span class="text-xs font-mono text-gray-500" id="mpx-val-left">— dBFS</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-              <div id="mpx-bar-left" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
-            </div>
-          </div>
+          <!-- Spectre MPX -->
           <div class="mb-3">
-            <div class="flex justify-between items-baseline mb-0.5">
-              <span class="text-xs font-semibold text-gray-600">R</span>
-              <span class="text-xs font-mono text-gray-500" id="mpx-val-right">— dBFS</span>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Spectre MPX</span>
+              <span class="text-xs text-gray-400 font-mono">0 — 85 kHz</span>
             </div>
-            <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-              <div id="mpx-bar-right" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
-            </div>
+            <canvas id="mpx-spectrum-canvas" style="width:100%;height:80px;display:block;border-radius:4px;" width="600" height="80"></canvas>
             <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-              <span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span>
+              <span>0</span><span style="color:#10b981">19k</span><span style="color:#3b82f6">38k</span><span style="color:#a855f7">57k</span><span>85 kHz</span>
             </div>
           </div>
-
           <div class="border-t border-gray-100 mb-3"></div>
 
+          <!-- Player -->
           <!-- Player -->
           <div class="flex items-center gap-3">
             <button id="rec-btn" onclick="toggleRecord()"
@@ -661,8 +654,6 @@
           if (disMsg) { disMsg.classList.remove('hidden'); disMsg.textContent = 'Déviation/Pilote/RDS : non disponibles en mode TEF'; }
 
           // L/R
-          _updateLR('left',  stats.level_left);
-          _updateLR('right', stats.level_right);
 
           // Puissance audio
           const power    = stats.mpx_power ?? -100;
@@ -717,8 +708,6 @@
       _updateSC('pilot',  stats.pilot_level,  stats.pilot_present);
       _updateSC('stereo', stats.stereo_level, stats.stereo_present);
       _updateSC('rds-rf', stats.rds_level,    stats.rds_rf_present);
-      _updateLR('left',   stats.level_left);
-      _updateLR('right',  stats.level_right);
 
       const snr    = stats.snr ?? 0;
       const snrPct = Math.min((snr / 60) * 100, 100);
@@ -909,6 +898,98 @@
         const data = await res.json();
         return data.csrf_token;
     }
+    const mpxCanvas = document.getElementById('mpx-spectrum-canvas');
+    let mpxSpectrumData = [];
+    let mpxSampleRate = 171000;
+
+    function drawMPXSpectrum() {
+        if (!mpxCanvas || mpxSpectrumData.length === 0) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = mpxCanvas.getBoundingClientRect();
+        mpxCanvas.width  = rect.width  * dpr;
+        mpxCanvas.height = rect.height * dpr;
+        const ctx = mpxCanvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const W = rect.width;
+        const H = rect.height;
+
+        // Fond
+        ctx.fillStyle = '#f9fafb';
+        ctx.fillRect(0, 0, W, H);
+
+        const dbMin = -100, dbMax = -20;
+        const nPoints = mpxSpectrumData.length;
+
+        // Zones colorées (pilote, stéréo, RDS)
+        const freqMax = mpxSampleRate / 2;
+        function freqToX(f) { return (f / freqMax) * W; }
+        // Zone audio 0-15kHz
+        ctx.fillStyle = 'rgba(16,185,129,0.06)';
+        ctx.fillRect(0, 0, freqToX(15000), H);
+        // Pilote 19kHz ± 0.5kHz
+        ctx.fillStyle = 'rgba(16,185,129,0.15)';
+        ctx.fillRect(freqToX(18500), 0, freqToX(500), H);
+        // Stéréo 23-53kHz
+        ctx.fillStyle = 'rgba(59,130,246,0.06)';
+        ctx.fillRect(freqToX(23000), 0, freqToX(30000), H);
+        // RDS 53-61kHz
+        ctx.fillStyle = 'rgba(168,85,247,0.08)';
+        ctx.fillRect(freqToX(53000), 0, freqToX(8000), H);
+
+        // Grille horizontale
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 1;
+        [-40, -60, -80].forEach(db => {
+            const y = H - ((db - dbMin) / (dbMax - dbMin)) * H;
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        });
+
+        // Spectre
+        ctx.beginPath();
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < nPoints; i++) {
+            const x = (i / nPoints) * W;
+            const db = Math.max(dbMin, Math.min(dbMax, mpxSpectrumData[i]));
+            const y = H - ((db - dbMin) / (dbMax - dbMin)) * H;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Remplissage sous la courbe
+        ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+        ctx.fillStyle = 'rgba(37,99,235,0.08)';
+        ctx.fill();
+
+        // Labels fréquences clés
+        ctx.font = '9px monospace';
+        ctx.fillStyle = '#10b981';
+        ctx.fillText('19k', freqToX(18500) + 2, 10);
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillText('38k', freqToX(38000) - 8, 10);
+        ctx.fillStyle = '#a855f7';
+        ctx.fillText('57k', freqToX(57000) - 4, 10);
+    }
+
+    async function fetchMPXSpectrum() {
+        try {
+            const resp = await fetch('/api/mpx/spectrum', {credentials: 'include'});
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.spectrum && data.spectrum.length > 0) {
+                mpxSpectrumData = data.spectrum;
+                mpxSampleRate   = data.sample_rate || 171000;
+                drawMPXSpectrum();
+            }
+        } catch(e) {}
+    }
+
+    setInterval(fetchMPXSpectrum, 500);
+    fetchMPXSpectrum();
+    window.addEventListener('resize', drawMPXSpectrum);
+
+
 </script>
 </body>
 </html>

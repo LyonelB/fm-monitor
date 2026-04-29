@@ -41,7 +41,17 @@ class MPXAnalyzer:
     def __init__(self, sample_rate: int = SAMPLE_RATE, process_every: int = 4):
         self.sample_rate   = sample_rate
         self.process_every = process_every
+        self._ema_alpha = 0.05  # lissage EMA (0=très lisse, 1=pas de lissage)
+        self._ema = {
+            'mpx_power': None, 'pilot_level': None,
+            'stereo_level': None, 'rds_level': None, 'snr': None,
+            'deviation_peak': None, 'deviation_rms': None
+        }
         self._counter      = 0
+        self._fft_size     = 2048
+        self._fft_window   = np.hanning(self._fft_size)
+        self._fft_avg      = None   # moyenne glissante EMA sur FFT
+        self._fft_alpha    = 0.15   # lissage FFT
         self._lock         = threading.Lock()
 
         self._results = {
@@ -58,6 +68,7 @@ class MPXAnalyzer:
             'level_left':     -100.0,
             'level_right':    -100.0,
             'snr':             0.0,
+            'fft_spectrum':    [],
         }
 
         nyq = sample_rate / 2.0
@@ -158,20 +169,44 @@ class MPXAnalyzer:
             snr_db    = round(20.0 * np.log10(max(lpr_rms, 1e-10) / noise_rms), 1)
             snr_db    = float(np.clip(snr_db, 0.0, 80.0))
 
+            # 8. FFT spectre MPX
+            chunk_fft = mpx[:self._fft_size] if len(mpx) >= self._fft_size else np.pad(mpx, (0, self._fft_size - len(mpx)))
+            windowed  = chunk_fft * self._fft_window
+            spectrum  = np.abs(np.fft.rfft(windowed))
+            # Convertir en dB avec plancher à -100 dB
+            spectrum_db = 20 * np.log10(np.maximum(spectrum / self._fft_size, 1e-10))
+            # Moyenne glissante EMA sur le spectre
+            if self._fft_avg is None:
+                self._fft_avg = spectrum_db
+            else:
+                self._fft_avg = self._fft_alpha * spectrum_db + (1 - self._fft_alpha) * self._fft_avg
+            # Réduire à 512 points pour l'API (décimation)
+            fft_decimated = self._fft_avg[::len(self._fft_avg)//512][:512]
+
+            # Lissage EMA
+            a = self._ema_alpha
+            def ema(key, val):
+                if self._ema[key] is None:
+                    self._ema[key] = val
+                else:
+                    self._ema[key] = a * val + (1 - a) * self._ema[key]
+                return round(self._ema[key], 1)
+
             with self._lock:
                 self._results.update({
-                    'deviation_peak':  dev_peak,
-                    'deviation_rms':   dev_rms,
-                    'mpx_power':       round(mpx_db, 1),
-                    'pilot_level':     round(pilot_db, 1),
+                    'deviation_peak':  ema('deviation_peak', dev_peak),
+                    'deviation_rms':   ema('deviation_rms', dev_rms),
+                    'mpx_power':       ema('mpx_power', mpx_db),
+                    'pilot_level':     ema('pilot_level', pilot_db),
                     'pilot_present':   bool(pilot_db > PILOT_DETECT_DB),
-                    'stereo_level':    round(stereo_db, 1),
+                    'stereo_level':    ema('stereo_level', stereo_db),
                     'stereo_present':  bool(stereo_db > STEREO_DETECT_DB),
-                    'rds_level':       round(rds_db, 1),
+                    'rds_level':       ema('rds_level', rds_db),
                     'rds_rf_present':  bool(rds_db > RDS_DETECT_DB),
                     'level_left':      round(l_db, 1),
                     'level_right':     round(r_db, 1),
-                    'snr':             snr_db,
+                    'snr':             ema('snr', snr_db),
+                    'fft_spectrum':    [round(float(x), 1) for x in fft_decimated],
                 })
 
         except Exception as exc:

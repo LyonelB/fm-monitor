@@ -839,6 +839,23 @@ def wifi_toggle():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+@app.route('/api/mpx/spectrum')
+@auth.login_required
+@limiter.exempt
+def mpx_spectrum():
+    """Retourne le spectre FFT MPX pour affichage canvas"""
+    if monitor and hasattr(monitor, 'mpx_analyzer') and monitor.mpx_analyzer:
+        results = monitor.mpx_analyzer.get_results()
+        spectrum = results.get('fft_spectrum', [])
+        sample_rate = monitor.rtl_config.get('sample_rate', '171000')
+        return jsonify({
+            'spectrum': spectrum,
+            'sample_rate': int(sample_rate),
+            'fft_size': 512
+        })
+    return jsonify({'spectrum': [], 'sample_rate': 171000, 'fft_size': 512})
+
 # Démarrage du monitor (exécuté aussi bien par Gunicorn que par python app.py)
 try:
     cleanup_orphan_records()
