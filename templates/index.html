@@ -902,6 +902,8 @@
     let mpxSpectrumData = [];
     let mpxSampleRate = 171000;
     let mpxHzPerBin = 167.0;
+    let mpxSpectrumSmooth = [];  // version lissée JS
+    const MPX_JS_ALPHA = 0.3;   // lissage JS (0=très lisse)
 
     function drawMPXSpectrum() {
         if (!mpxCanvas || mpxSpectrumData.length === 0) return;
@@ -1007,9 +1009,17 @@
             if (!resp.ok) return;
             const data = await resp.json();
             if (data.spectrum && data.spectrum.length > 0) {
-                mpxSpectrumData = data.spectrum;
                 mpxSampleRate   = data.sample_rate || 171000;
                 mpxHzPerBin     = data.hz_per_bin || 167.0;
+                const raw = data.spectrum;
+                if (mpxSpectrumSmooth.length !== raw.length) {
+                    mpxSpectrumSmooth = raw.slice();
+                } else {
+                    for (let i = 0; i < raw.length; i++) {
+                        mpxSpectrumSmooth[i] = MPX_JS_ALPHA * raw[i] + (1 - MPX_JS_ALPHA) * mpxSpectrumSmooth[i];
+                    }
+                }
+                mpxSpectrumData = mpxSpectrumSmooth;
                 drawMPXSpectrum();
             }
         } catch(e) {}
