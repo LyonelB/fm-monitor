@@ -197,11 +197,11 @@
           <div class="mb-3">
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Spectre MPX</span>
-              <span class="text-xs text-gray-400 font-mono">0 — 75 kHz</span>
+              <span class="text-xs text-gray-400 font-mono">0 — 85 kHz</span>
             </div>
             <canvas id="mpx-spectrum-canvas" style="width:100%;height:100px;display:block;border-radius:4px;" width="600" height="100"></canvas>
             <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-              <span>0</span><span></span><span></span><span></span><span>75 kHz</span>
+              <span>0 kHz</span><span></span><span></span><span></span><span>85 kHz</span>
             </div>
           </div>
           <div class="border-t border-gray-100 mb-3"></div>
@@ -901,6 +901,7 @@
     const mpxCanvas = document.getElementById('mpx-spectrum-canvas');
     let mpxSpectrumData = [];
     let mpxSampleRate = 171000;
+    let mpxHzPerBin = 167.0;
 
     function drawMPXSpectrum() {
         if (!mpxCanvas || mpxSpectrumData.length === 0) return;
@@ -917,17 +918,15 @@
         ctx.fillStyle = '#f9fafb';
         ctx.fillRect(0, 0, W, H);
 
-        // Amplitude dynamique : centrer sur le signal réel
-        const validData = mpxSpectrumData.filter(v => v > -200);
-        const dataMax = validData.length ? Math.max(...validData) : -20;
-        const dataMin = validData.length ? Math.min(...validData) : -100;
-        const dbMax = Math.min(-10, dataMax + 10);
-        const dbMin = Math.max(-120, dataMin - 5);
+        // Fréquences et mapping
+        const freqNyquist = mpxSampleRate / 2;
+        const freqDisplay = 75000;
         const nPoints = mpxSpectrumData.length;
-
-        // Zones colorées (pilote, stéréo, RDS)
-        const freqMax = 75000;  // Affichage limité à 75kHz (standard FM MPX)
-        function freqToX(f) { return (f / freqMax) * W; }
+        const nDisplay = Math.floor(nPoints * freqDisplay / freqNyquist);
+        function freqToX(f) { return (f / freqDisplay) * W; }
+        // Amplitude dynamique
+        const dbMax = -20;   // plafond fixe
+        const dbMin = -90;   // plancher fixe
         // Zone audio 0-15kHz
         ctx.fillStyle = 'rgba(16,185,129,0.06)';
         ctx.fillRect(0, 0, freqToX(15000), H);
@@ -953,8 +952,9 @@
         ctx.beginPath();
         ctx.strokeStyle = '#2563eb';
         ctx.lineWidth = 1.5;
+        const hzPerBin = (mpxSampleRate / 2) / nPoints;  // 85500 / 512 = 167 Hz
         for (let i = 0; i < nPoints; i++) {
-            const x = (i / nPoints) * W;
+            const x = freqToX(i * hzPerBin);
             const db = Math.max(dbMin, Math.min(dbMax, mpxSpectrumData[i]));
             const y = H - ((db - dbMin) / (dbMax - dbMin)) * H;
             if (i === 0) ctx.moveTo(x, y);
@@ -1009,6 +1009,7 @@
             if (data.spectrum && data.spectrum.length > 0) {
                 mpxSpectrumData = data.spectrum;
                 mpxSampleRate   = data.sample_rate || 171000;
+                mpxHzPerBin     = data.hz_per_bin || 167.0;
                 drawMPXSpectrum();
             }
         } catch(e) {}

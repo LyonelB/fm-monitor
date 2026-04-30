@@ -848,10 +848,15 @@ def mpx_spectrum():
     if monitor and hasattr(monitor, 'mpx_analyzer') and monitor.mpx_analyzer:
         results = monitor.mpx_analyzer.get_results()
         spectrum = results.get('fft_spectrum', [])
-        sample_rate = monitor.rtl_config.get('sample_rate', '171000')
+        sample_rate = getattr(monitor.mpx_analyzer, 'sample_rate', 171000)
+        fft_size = getattr(monitor.mpx_analyzer, '_fft_size', 2048)
+        n_rfft = fft_size // 2 + 1
+        decim_step = n_rfft // 512
+        hz_per_bin = decim_step * sample_rate / fft_size
         return jsonify({
             'spectrum': spectrum,
             'sample_rate': int(sample_rate),
+            'hz_per_bin': hz_per_bin,
             'fft_size': 512
         })
     return jsonify({'spectrum': [], 'sample_rate': 171000, 'fft_size': 512})
