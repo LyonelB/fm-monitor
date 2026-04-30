@@ -92,7 +92,12 @@ class FMMonitor:
         self.rds_ever_received = False
         self.rds_last_seen = None
         self.rds_alert_sent = False
+        self.rt_alert_sent = False
+        self.rt_last_seen = None
         self.rds_timeout = int(self.audio_config.get('rds_timeout', 120))
+        self.rt_last_seen = None
+        self.rt_alert_sent = False
+        self.rt_timeout = int(self.audio_config.get('rt_timeout', 300))  # 5 min par défaut
 
         # Système d'alertes
         self.email_alert = EmailAlert(config_path)
@@ -618,9 +623,11 @@ class FMMonitor:
         """Initialise le mode GNU Radio : stéréo WFM + RDS via FIFO."""
         import os
         RDS_FIFO = '/tmp/rds_gnuradio.pcm'
-        if os.path.exists(RDS_FIFO):
-            os.remove(RDS_FIFO)
-        os.mkfifo(RDS_FIFO)
+        MPX_FIFO = '/tmp/mpx_gnuradio.pcm'
+        for fifo in [RDS_FIFO, MPX_FIFO]:
+            if os.path.exists(fifo):
+                os.remove(fifo)
+            os.mkfifo(fifo)
         logger.info("Mode GNU Radio : FIFO RDS créé")
 
         self.master_thread = threading.Thread(
@@ -632,6 +639,12 @@ class FMMonitor:
             target=self._redsea_gnuradio, daemon=True, name='gnuradio-rds'
         )
         self.redsea_gnuradio_thread.start()
+
+        if self.mpx_enabled:
+            self.mpx_gnuradio_thread = threading.Thread(
+                target=self._mpx_gnuradio_reader, daemon=True, name='gnuradio-mpx'
+            )
+            self.mpx_gnuradio_thread.start()
 
         if self.rds_enabled:
             self.rds_thread = threading.Thread(target=self._rds_reader, daemon=True)
@@ -702,8 +715,7 @@ class FMMonitor:
                         self.stats['level_right']       = float(db_r)
                         self.stats['modulation_active'] = bool(db > -60.0)
 
-                    if self.mpx_enabled:
-                        self.mpx_analyzer.process_chunk(samples[::2])  # canal L seul
+                    # MPXAnalyzer alimenté par thread dédié depuis FIFO (voir _mpx_gnuradio_reader)
 
                     if self.history_enabled and time.time() - self.last_db_save >= 5:
                         try:
@@ -720,6 +732,26 @@ class FMMonitor:
         finally:
             if self.master_process:
                 self.master_process.kill()
+
+    def _mpx_gnuradio_reader(self):
+        """Lit le signal MPX brut depuis le FIFO GNU Radio et alimente MPXAnalyzer."""
+        import os
+        MPX_FIFO = '/tmp/mpx_gnuradio.pcm'
+        while not os.path.exists(MPX_FIFO):
+            time.sleep(0.2)
+        time.sleep(1)
+        logger.info("GNU Radio MPX : démarrage analyse spectre")
+        try:
+            with open(MPX_FIFO, 'rb') as f:
+                while self.running:
+                    chunk = f.read(4096)
+                    if not chunk:
+                        break
+                    samples = np.frombuffer(chunk, dtype=np.int16)
+                    if self.mpx_enabled and len(samples) >= 512:
+                        self.mpx_analyzer.process_chunk(samples)
+        except Exception as e:
+            logger.error(f"Erreur MPX GNU Radio reader: {e}")
 
     def _redsea_gnuradio(self):
         """
@@ -841,6 +873,7 @@ class FMMonitor:
                             if rt_full:
                                 self.stats['rt'] = rt_full
                                 self.rt_buffer = rt_full
+                                self.rt_last_seen = time.time()
                         elif 'partial_radiotext' in data:
                             rt_segment = data['partial_radiotext'].strip()
                             rt_ab = data.get('rt_ab', 'A')
@@ -856,6 +889,7 @@ class FMMonitor:
                                 self._rt_stable_count += 1
                                 if self._rt_stable_count >= 3:
                                     self.stats['rt'] = self.rt_buffer
+                                    self.rt_last_seen = time.time()
                                     self._rt_stable_count = 0
                             else:
                                 self._rt_last_candidate = self.rt_buffer
@@ -1117,6 +1151,45 @@ class FMMonitor:
                             )
                         self.rds_ok = True
                         self.rds_alert_sent = False
+
+                # ── 3b. SURVEILLANCE RT (RadioText) ───────────────────────────
+                if self.rds_enabled and self.rds_ever_received and self.rds_ok:
+                    if self.rt_last_seen is not None:
+                        rt_absence = time.time() - self.rt_last_seen
+                        if rt_absence >= self.rt_timeout:
+                            if not self.rt_alert_sent:
+                                logger.warning(f"RT absent depuis {rt_absence:.0f}s - ENVOI ALERTE")
+                                success = self.email_alert.send_alert(
+                                    alert_type="RadioText absent",
+                                    details=f"Aucun RadioText (RT) reçu depuis {int(rt_absence)}s.\n"
+                                            f"Vérifier le codeur RDS de la station.",
+                                    skip_cooldown=True
+                                )
+                                if success:
+                                    self.rt_alert_sent = True
+                                    self.db.save_alert(
+                                        alert_type='rt_lost',
+                                        level_db=current_level,
+                                        duration_seconds=int(rt_absence),
+                                        message=f"RadioText absent depuis {int(rt_absence)}s",
+                                        email_sent=True
+                                    )
+                        else:
+                            if self.rt_alert_sent:
+                                logger.info("RadioText rétabli")
+                                self.email_alert.send_alert(
+                                    alert_type="RadioText rétabli",
+                                    details="Le RadioText est à nouveau reçu correctement.",
+                                    skip_cooldown=True
+                                )
+                                self.db.save_alert(
+                                    alert_type='rt_restored',
+                                    level_db=current_level,
+                                    duration_seconds=0,
+                                    message="RadioText rétabli",
+                                    email_sent=True
+                                )
+                            self.rt_alert_sent = False
 
                 # ── 4. SURVEILLANCE SUR-DÉVIATION FM ─────────────────────────
                 if self.mpx_enabled and not self.use_tef:

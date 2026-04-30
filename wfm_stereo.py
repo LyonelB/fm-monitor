@@ -10,6 +10,7 @@ import sys
 import os
 
 RDS_FIFO = '/tmp/rds_gnuradio.pcm'
+MPX_FIFO = '/tmp/mpx_gnuradio.pcm'
 
 class WFMStereo(gr.top_block):
     def __init__(self, freq=88.6e6, gain=40, ppm=0):
@@ -71,8 +72,12 @@ class WFMStereo(gr.top_block):
         self.f2s_mpx  = blocks.float_to_short(1, 1)
         self.mpx_sink = blocks.file_sink(gr.sizeof_short, RDS_FIFO, False)
         self.mpx_sink.set_unbuffered(True)
+        self.mpx_sink2 = blocks.file_sink(gr.sizeof_short, MPX_FIFO, False)
+        self.mpx_sink2.set_unbuffered(True)
 
-        self.connect(self.src, self.decim_b, self.fm_demod_b, self.mult_mpx, self.f2s_mpx, self.mpx_sink)
+        self.connect(self.src, self.decim_b, self.fm_demod_b, self.mult_mpx, self.f2s_mpx)
+        self.connect(self.f2s_mpx, self.mpx_sink)
+        self.connect(self.f2s_mpx, self.mpx_sink2)
 
 
 if __name__ == "__main__":
@@ -82,6 +87,8 @@ if __name__ == "__main__":
 
     if not os.path.exists(RDS_FIFO):
         os.mkfifo(RDS_FIFO)
+    if not os.path.exists(MPX_FIFO):
+        os.mkfifo(MPX_FIFO)
 
 
     tb = WFMStereo(freq=freq, gain=gain, ppm=ppm)

@@ -197,11 +197,11 @@
           <div class="mb-3">
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Spectre MPX</span>
-              <span class="text-xs text-gray-400 font-mono">0 — 85 kHz</span>
+              <span class="text-xs text-gray-400 font-mono">0 — 75 kHz</span>
             </div>
-            <canvas id="mpx-spectrum-canvas" style="width:100%;height:80px;display:block;border-radius:4px;" width="600" height="80"></canvas>
+            <canvas id="mpx-spectrum-canvas" style="width:100%;height:100px;display:block;border-radius:4px;" width="600" height="100"></canvas>
             <div class="flex justify-between text-xs text-gray-400 font-mono mt-0.5">
-              <span>0</span><span style="color:#10b981">19k</span><span style="color:#3b82f6">38k</span><span style="color:#a855f7">57k</span><span>85 kHz</span>
+              <span>0</span><span></span><span></span><span></span><span>75 kHz</span>
             </div>
           </div>
           <div class="border-t border-gray-100 mb-3"></div>
@@ -917,11 +917,16 @@
         ctx.fillStyle = '#f9fafb';
         ctx.fillRect(0, 0, W, H);
 
-        const dbMin = -100, dbMax = -20;
+        // Amplitude dynamique : centrer sur le signal réel
+        const validData = mpxSpectrumData.filter(v => v > -200);
+        const dataMax = validData.length ? Math.max(...validData) : -20;
+        const dataMin = validData.length ? Math.min(...validData) : -100;
+        const dbMax = Math.min(-10, dataMax + 10);
+        const dbMin = Math.max(-120, dataMin - 5);
         const nPoints = mpxSpectrumData.length;
 
         // Zones colorées (pilote, stéréo, RDS)
-        const freqMax = mpxSampleRate / 2;
+        const freqMax = 75000;  // Affichage limité à 75kHz (standard FM MPX)
         function freqToX(f) { return (f / freqMax) * W; }
         // Zone audio 0-15kHz
         ctx.fillStyle = 'rgba(16,185,129,0.06)';
@@ -962,14 +967,38 @@
         ctx.fillStyle = 'rgba(37,99,235,0.08)';
         ctx.fill();
 
-        // Labels fréquences clés
-        ctx.font = '9px monospace';
-        ctx.fillStyle = '#10b981';
-        ctx.fillText('19k', freqToX(18500) + 2, 10);
-        ctx.fillStyle = '#3b82f6';
-        ctx.fillText('38k', freqToX(38000) - 8, 10);
-        ctx.fillStyle = '#a855f7';
-        ctx.fillText('57k', freqToX(57000) - 4, 10);
+        // Labels fréquences clés — positionnés en bas du canvas
+        ctx.font = 'bold 9px monospace';
+        // Ligne verticale + label pour chaque fréquence clé
+        const markers = [
+            { f: 19000, label: '19k', color: '#10b981' },
+            { f: 38000, label: '38k', color: '#3b82f6' },
+            { f: 57000, label: '57k', color: '#a855f7' },
+        ];
+        // Sauvegarder le contexte, dessiner sans scaling pour le texte
+        markers.forEach(({ f, label, color }) => {
+            const x = freqToX(f);
+            // Ligne pointillée verticale (dans le contexte scalé)
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.5;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 3]);
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 16); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+        });
+        // Labels en dehors du scaling DPR
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        markers.forEach(({ f, label, color }) => {
+            const x = freqToX(f) * dpr;
+            const y = mpxCanvas.height - 4;
+            ctx.fillStyle = color;
+            ctx.fillText(label, x, y);
+        });
+        ctx.restore();
     }
 
     async function fetchMPXSpectrum() {

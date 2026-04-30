@@ -51,7 +51,7 @@ class MPXAnalyzer:
         self._fft_size     = 2048
         self._fft_window   = np.hanning(self._fft_size)
         self._fft_avg      = None   # moyenne glissante EMA sur FFT
-        self._fft_alpha    = 0.15   # lissage FFT
+        self._fft_alpha    = 0.3    # lissage FFT (moins fort pour garder les pics)
         self._lock         = threading.Lock()
 
         self._results = {
@@ -174,7 +174,7 @@ class MPXAnalyzer:
             windowed  = chunk_fft * self._fft_window
             spectrum  = np.abs(np.fft.rfft(windowed))
             # Convertir en dB avec plancher à -100 dB
-            spectrum_db = 20 * np.log10(np.maximum(spectrum / self._fft_size, 1e-10))
+            spectrum_db = 20 * np.log10(np.maximum(spectrum * 2 / self._fft_size, 1e-10))
             # Moyenne glissante EMA sur le spectre
             if self._fft_avg is None:
                 self._fft_avg = spectrum_db
