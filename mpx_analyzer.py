@@ -51,7 +51,7 @@ class MPXAnalyzer:
         self._fft_size     = 2048
         self._fft_window   = np.hanning(self._fft_size)
         self._fft_avg      = None   # moyenne glissante EMA sur FFT
-        self._fft_alpha    = 0.3    # lissage FFT (moins fort pour garder les pics)
+        self._fft_alpha    = 0.15   # lissage FFT
         self._lock         = threading.Lock()
 
         self._results = {
