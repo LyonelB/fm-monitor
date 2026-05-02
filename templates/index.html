@@ -27,12 +27,26 @@
     .section-label { font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.06em; }
     @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .pulse { animation:pulse-ring 1.5s ease-in-out infinite; }
+    .top-row { grid-template-columns: 1fr; }
+    @media (min-width: 768px) { .top-row { grid-template-columns: 3fr 2fr 2fr; } }
+    @media (max-width: 767px) {
+      #station-logo-container { width:100px !important; min-height:80px !important; }
+      #station-logo { width:100px !important; height:100px !important; }
+      #station-logo-placeholder { width:100px !important; height:100px !important; }
+    }
+    .top-row { grid-template-columns: 1fr; }
+    @media (min-width: 768px) { .top-row { grid-template-columns: 3fr 2fr 2fr; } }
+    @media (max-width: 767px) {
+      #station-logo-container { width:100px !important; min-height:80px !important; }
+      #station-logo { width:100px !important; height:100px !important; }
+      #station-logo-placeholder { width:100px !important; height:100px !important; }
+    }
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
 <!-- ═══════════════════════════════════════════════════════ SIDEBAR -->
-<aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen">
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen transform -translate-x-full md:translate-x-0 md:relative transition-transform duration-300 ease-in-out">
 
   <!-- Logo -->
   <div class="p-5 border-b border-gray-100">
@@ -78,12 +92,16 @@
   </div>
 </aside>
 
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/30 z-40 hidden md:hidden" onclick="closeSidebar()"></div>
 <!-- ═══════════════════════════════════════════════════════ MAIN -->
-<main class="flex-1 flex flex-col overflow-hidden">
+<main class="flex-1 flex flex-col overflow-hidden min-w-0">
 
   <!-- Header -->
   <header class="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between flex-shrink-0">
     <div class="flex items-center gap-3">
+      <button class="md:hidden text-gray-500 hover:text-gray-700 flex-shrink-0" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
       <h1 class="text-base font-semibold text-gray-900" id="station-name-display">FM Monitor</h1>
       <span class="text-xs text-gray-400 font-mono" id="frequency-display">—</span>
     </div>
@@ -99,7 +117,7 @@
   <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
 
     <!-- ── Bande du haut ──────────────────────────────────────── -->
-    <div class="flex-shrink-0 grid gap-3" style="grid-template-columns: 3fr 2fr 2fr">
+    <div class="flex-shrink-0 grid gap-3 top-row">
 
       <!-- Bloc 1 : Logo station + RDS -->
       <div class="card flex gap-0 p-0 overflow-hidden">
@@ -175,7 +193,7 @@
     </div><!-- /top row -->
 
     <!-- ── Grille 2 colonnes ──────────────────────────────────── -->
-    <div class="flex-shrink-0 grid grid-cols-2 gap-3">
+    <div class="flex-shrink-0 grid grid-cols-1 md:grid-cols-2 gap-3">
 
       <!-- ══ Col gauche ══ -->
       <div class="flex flex-col gap-3">
@@ -1028,6 +1046,24 @@
     setInterval(fetchMPXSpectrum, 500);
     fetchMPXSpectrum();
     window.addEventListener('resize', drawMPXSpectrum);
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.toggle('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.toggle('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
 
 
 </script>

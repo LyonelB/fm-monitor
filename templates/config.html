@@ -39,7 +39,7 @@
 <body class="flex h-screen overflow-hidden bg-slate-50">
 
 <!-- ═══ SIDEBAR ═══ -->
-<aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen">
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen transform -translate-x-full md:translate-x-0 md:relative transition-transform duration-300 ease-in-out">
 
   <div class="p-5 border-b border-gray-100">
     <div class="flex items-center gap-3">
@@ -82,11 +82,17 @@
   </div>
 </aside>
 
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/30 z-40 hidden md:hidden" onclick="closeSidebar()"></div>
 <!-- ═══ MAIN ═══ -->
 <main class="flex-1 overflow-y-auto">
 
   <header class="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-10">
-    <h1 class="text-base font-semibold text-gray-900">Configuration</h1>
+    <div class="flex items-center gap-2">
+      <button class="md:hidden text-gray-500 hover:text-gray-700 flex-shrink-0 mr-2" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h1 class="text-base font-semibold text-gray-900">Configuration</h1>
+    </div>
     <p class="text-xs text-gray-400 mt-0.5">Paramètres du monitoring FM</p>
   </header>
 
@@ -142,7 +148,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
         2. Surveillance &amp; Seuils
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div class="field-label">Seuil modulation (dB std)</div>
           <input type="number" id="modulation-std-threshold" class="field-input" placeholder="0.5" step="0.1" min="0.1" max="5">
@@ -177,7 +183,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         3. Alertes email (Gmail)
       </div>
-      <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <div class="field-label">Email expéditeur</div>
           <input type="email" id="sender-email" class="field-input" placeholder="votre.email@gmail.com">
@@ -229,7 +235,7 @@
       </div>
 
       <div id="static-ip-config" class="hidden">
-        <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <div class="field-label">Adresse IP</div>
             <input type="text" id="ip-address" class="field-input" placeholder="192.168.1.100">
@@ -262,7 +268,7 @@
             <span class="ml-2 text-xs font-medium text-gray-700" id="wifi-toggle-label">Chargement...</span>
           </label>
         </div>
-        <div id="wifi-credentials" class="grid grid-cols-2 gap-4">
+        <div id="wifi-credentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div class="field-label">SSID (nom du réseau)</div>
             <input type="text" id="wifi-ssid" class="field-input" placeholder="MonReseauWiFi">
@@ -923,6 +929,15 @@
     }
   }
 
-</script>
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.toggle('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+  </script>
 </body>
 </html>
