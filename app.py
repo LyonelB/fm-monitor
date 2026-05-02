@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 # Secret key depuis variable d'environnement (ou génération aléatoire)
 app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(32).hex()
 
