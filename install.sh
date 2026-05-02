@@ -30,6 +30,7 @@ print_error()   { echo -e "${RED}[✗]${NC} $1"; }
 INSTALL_DIR="$HOME/fm-monitor"
 GITHUB_REPO="https://github.com/LyonelB/fm-monitor.git"
 ICECAST_PASSWORD="fmmonitor2026"
+MDNS_HOSTNAME="fm-monitor"
 
 if [ "$EUID" -eq 0 ]; then
     print_error "Ne lancez pas ce script en root (pas de sudo)"
@@ -109,6 +110,10 @@ PACKAGES=(
     "openssl"
     "coreutils"
     "build-essential"
+    "avahi-daemon"
+    "nginx"
+    "mkcert"
+    "libnss3-tools"
     "libopenblas-dev"
     "libportaudio2"
     "meson"
@@ -395,6 +400,76 @@ sudo systemctl enable fm-monitor
 print_info "Service systemd configuré"
 
 # =============================================
+# 12b. CONFIGURATION AVAHI / mDNS
+# =============================================
+print_step "Configuration mDNS ($MDNS_HOSTNAME.local)..."
+
+sudo hostnamectl set-hostname "$MDNS_HOSTNAME"
+
+# Mettre à jour /etc/hosts
+if ! grep -q "$MDNS_HOSTNAME" /etc/hosts; then
+    sudo sed -i "s/127.0.1.1.*/127.0.1.1\t$MDNS_HOSTNAME/" /etc/hosts
+fi
+
+# Configurer Avahi
+sudo sed -i "s/^#*host-name=.*/host-name=$MDNS_HOSTNAME/" /etc/avahi/avahi-daemon.conf
+sudo sed -i "s/^#*domain-name=.*/domain-name=local/" /etc/avahi/avahi-daemon.conf
+
+sudo systemctl enable avahi-daemon
+sudo systemctl restart avahi-daemon
+print_info "mDNS configuré : $MDNS_HOSTNAME.local ✓"
+
+# =============================================
+# 12c. CONFIGURATION NGINX
+# =============================================
+print_step "Configuration Nginx reverse proxy..."
+
+sudo mkdir -p /etc/nginx/ssl
+
+# Générer certificat mkcert
+mkcert -install 2>/dev/null || true
+mkcert -cert-file ~/fm-monitor-nginx.crt -key-file ~/fm-monitor-nginx.key "$MDNS_HOSTNAME.local" 2>/dev/null
+sudo mv ~/fm-monitor-nginx.crt /etc/nginx/ssl/fm-monitor.crt
+sudo mv ~/fm-monitor-nginx.key /etc/nginx/ssl/fm-monitor.key
+
+sudo tee /etc/nginx/sites-available/fm-monitor > /dev/null << NGINX
+server {
+    listen 80;
+    server_name $MDNS_HOSTNAME.local;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $MDNS_HOSTNAME.local;
+
+    ssl_certificate /etc/nginx/ssl/fm-monitor.crt;
+    ssl_certificate_key /etc/nginx/ssl/fm-monitor.key;
+
+    location / {
+        proxy_pass https://127.0.0.1:5000;
+        proxy_ssl_verify off;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Forwarded-Host \$host;
+    }
+}
+NGINX
+
+sudo ln -sf /etc/nginx/sites-available/fm-monitor /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl enable nginx && sudo systemctl restart nginx
+print_info "Nginx configuré ✓"
+
+# Informer l'utilisateur pour l'import CA
+CAROOT=$(mkcert -CAROOT)
+print_warning "Pour éviter les avertissements SSL sur vos appareils :"
+print_info "Importez la CA dans vos navigateurs : $CAROOT/rootCA.pem"
+print_info "  Depuis le réseau : http://$MDNS_HOSTNAME.local:8080/rootCA.pem"
+print_info "  (lancez : cd $CAROOT && python3 -m http.server 8080)"
+
+# =============================================
 # 13. PERMISSIONS RTL-SDR
 # =============================================
 print_step "Configuration des permissions RTL-SDR..."
@@ -456,7 +531,7 @@ echo -e "==========================================${NC}"
 echo ""
 print_info "Résumé:"
 echo "  • Répertoire : $INSTALL_DIR"
-echo "  • URL        : https://$(hostname -I | awk '{print $1}'):5000"
+echo "  • URL        : https://$MDNS_HOSTNAME.local (ou https://$(hostname -I | awk '{print $1}'):5000)"
 echo ""
 print_info "Identifiants par défaut:"
 echo "  • Username : admin"
@@ -475,7 +550,7 @@ sudo systemctl start fm-monitor
 sleep 3
 if sudo systemctl is-active --quiet fm-monitor; then
     print_step "FM Monitor démarré !"
-    print_info "Accédez à https://$(hostname -I | awk '{print $1}'):5000"
+    print_info "Accédez à https://$MDNS_HOSTNAME.local"
 else
     print_error "Erreur au démarrage"
     print_info "Diagnostic: sudo journalctl -u fm-monitor -n 50"
