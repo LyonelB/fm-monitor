@@ -165,6 +165,7 @@ class FMDatabase:
             'signal_lost':   ('signal_restored',      'Perte émetteur'),
             'no_modulation': ('modulation_restored',  'Absence modulation'),
             'rds_lost':      ('rds_restored',         'RDS absent'),
+            'rt_lost':       ('rt_restored',          'RadioText absent'),
         }
         RESTORE_TYPES = {v[0]: k for k, v in ALERT_PAIRS.items()}
 
