@@ -30,7 +30,10 @@ print_error()   { echo -e "${RED}[✗]${NC} $1"; }
 INSTALL_DIR="$HOME/fm-monitor"
 GITHUB_REPO="https://github.com/LyonelB/fm-monitor.git"
 ICECAST_PASSWORD="fmmonitor2026"
-MDNS_HOSTNAME="fm-monitor"
+# Hostname mDNS (modifiable par l'utilisateur)
+read -p "Nom d'hôte mDNS [bl-fmo] : " MDNS_INPUT
+MDNS_HOSTNAME="${MDNS_INPUT:-bl-fmo}"
+print_info "Hostname choisi : $MDNS_HOSTNAME.local"
 
 if [ "$EUID" -eq 0 ]; then
     print_error "Ne lancez pas ce script en root (pas de sudo)"
