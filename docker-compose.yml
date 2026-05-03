@@ -1,0 +1,20 @@
+services:
+  fm-monitor:
+    build: .
+    container_name: fm-monitor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - "5000:5000"
+      - "8000:8000"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./.env:/app/.env
+      - fm-monitor-db:/app/fm_monitor.db
+    environment:
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  fm-monitor-db:

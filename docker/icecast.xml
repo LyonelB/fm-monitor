@@ -1,0 +1,37 @@
+<icecast>
+  <location>France</location>
+  <admin>admin@fm-monitor.local</admin>
+  <limits>
+    <clients>10</clients>
+    <sources>1</sources>
+    <queue-size>524288</queue-size>
+    <client-timeout>30</client-timeout>
+    <header-timeout>15</header-timeout>
+    <source-timeout>10</source-timeout>
+  </limits>
+  <authentication>
+    <source-password>fmmonitor2026</source-password>
+    <relay-password>fmmonitor2026</relay-password>
+    <admin-user>admin</admin-user>
+    <admin-password>fmmonitor2026</admin-password>
+  </authentication>
+  <hostname>localhost</hostname>
+  <listen-socket>
+    <port>8000</port>
+  </listen-socket>
+  <http-headers>
+    <header name="Access-Control-Allow-Origin" value="*"/>
+  </http-headers>
+  <paths>
+    <basedir>/usr/share/icecast2</basedir>
+    <logdir>/var/log/icecast2</logdir>
+    <webroot>/usr/share/icecast2/web</webroot>
+    <adminroot>/usr/share/icecast2/admin</adminroot>
+    <pidfile>/run/icecast2/icecast2.pid</pidfile>
+  </paths>
+  <logging>
+    <accesslog>access.log</accesslog>
+    <errorlog>error.log</errorlog>
+    <loglevel>1</loglevel>
+  </logging>
+</icecast>
