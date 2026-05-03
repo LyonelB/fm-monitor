@@ -4,6 +4,38 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+## [0.7.0] - 2026-05-03
+### Accessibilite et Distribution
+
+#### Acces reseau local
+- Nginx reverse proxy : acces via https://bl-fmo.local
+- mDNS/Avahi : resolution bl-fmo.local sur tout le reseau local
+- mkcert : certificat SSL local valide
+- Redirection HTTP vers HTTPS automatique via Nginx
+- ProxyFix : middleware Werkzeug pour la gestion des redirections via proxy
+
+#### Mode public
+- Route /public : dashboard accessible sans authentification
+- Sidebar reduite a un lien Se connecter, sans bouton REC ni Configuration
+- Badge Vue publique visible dans le header
+
+#### Push webhook temps reel
+- Thread webhook : envoi automatique des donnees vers une URL externe
+- Payload JSON : station, frequency, signal_db, signal_ok, ps, rt, pi, stereo, alert, timestamp
+- Configuration UI : section dans la page Configuration
+- fmmonitor-receiver.php : script PHP pour afficher les donnees sur un site web
+
+#### Interface responsive mobile
+- Sidebar drawer : menu hamburger sur mobile avec overlay
+- Grilles adaptatives : colonnes empilees sur mobile, cote a cote sur desktop
+- 4 templates mis a jour : index, config, stats, about
+
+### Installation
+- install.sh : ajout de Avahi, Nginx, mkcert lors de l'installation
+- Hostname interactif lors de l'installation (defaut : bl-fmo)
+
+---
+
 ## [0.6.0] - 2026-04-27
 
 ### 🎉 Mode GNU Radio WFM stéréo
@@ -36,6 +68,7 @@ Nouveau paramètre dans `config.json` :
 ```
 Valeurs : `"rtl_fm"` (défaut, mono) ou `"gnuradio"` (stéréo WFM)
 
+[0.7.0]: https://github.com/LyonelB/fm-monitor/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/LyonelB/fm-monitor/compare/v0.5.2...v0.6.0
 
 ## [0.5.2] - 2026-04-10
