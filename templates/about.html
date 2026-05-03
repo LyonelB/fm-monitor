@@ -185,32 +185,34 @@
       </div>
     </div>
 
-    <!-- ── Radio Browser ──────────────────────────────────────── -->
+    <!-- ── rds-station-db ───────────────────────────────────── -->
     <div class="section">
       <div class="section-title">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
-        Radio Browser
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11h6M9 15h4"/></svg>
+        rds-station-db
       </div>
-      <p class="text-xs text-gray-600 mb-3"><a href="https://www.radio-browser.info" target="_blank" class="text-blue-500 hover:underline">radio-browser.info</a> est une base de données collaborative open source répertoriant des milliers de stations. FM Monitor l'utilise pour récupérer automatiquement le <strong>logo de la station</strong> captée en croisant le PS RDS avec la fréquence.</p>
-      <div class="grid grid-cols-2 gap-3">
+      <p class="text-xs text-gray-600 mb-3">
+        FM Monitor utilise <a href="https://github.com/LyonelB/rds-station-db" target="_blank" class="text-blue-500 hover:underline font-medium">rds-station-db</a>, une base de données de stations FM maintenue sur GitHub, pour identifier automatiquement la station captée et récupérer son <strong>logo</strong> à partir du code PI RDS.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div class="info-card">
-          <div class="font-semibold text-gray-700 text-xs mb-2">Comment FM Monitor trouve le logo</div>
+          <div class="font-semibold text-gray-700 text-xs mb-2">Comment FM Monitor identifie la station</div>
           <ol class="space-y-0.5 text-xs text-gray-600 list-decimal list-inside">
-            <li>Réception du PS RDS (ex: "GRAFFITI")</li>
-            <li>Recherche sur Radio Browser avec le nom de station + fréquence</li>
-            <li>Priorité aux résultats avec fréquence exacte</li>
-            <li>Fallback sur le premier résultat avec un logo valide</li>
-            <li>Logo mis en cache — une seule requête par session</li>
+            <li>Réception du code PI RDS (ex: FA41)</li>
+            <li>Recherche dans rds-station-db par code PI</li>
+            <li>Récupération du nom et du logo associé</li>
+            <li>Logo mis en cache — rechargement toutes les 24h</li>
           </ol>
         </div>
         <div class="info-card">
-          <div class="font-semibold text-gray-700 text-xs mb-2">Ma station n'a pas de logo ?</div>
-          <p class="text-xs text-gray-600 mb-3">Si votre station n'est pas référencée ou n'a pas de favicon dans Radio Browser, vous pouvez contribuer directement :</p>
-          <a href="https://www.radio-browser.info" target="_blank"
-             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Ajouter ma station
+          <div class="font-semibold text-gray-700 text-xs mb-2">Logos des stations</div>
+          <p class="text-xs text-gray-600 mb-2">Les logos proviennent du dépôt maintenu par <strong>Noobish</strong> de la communauté <span class="font-mono bg-gray-100 px-1 rounded">FM-DX</span> :</p>
+          <a href="https://tef.noobish.eu/logos/logo_preview.html" target="_blank"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition mb-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            Voir les logos disponibles
           </a>
+          <p class="text-xs text-gray-400">tef.noobish.eu/logos</p>
         </div>
       </div>
     </div>
@@ -381,12 +383,12 @@ rtl_test -t</pre>
           <svg class="w-7 h-7 text-gray-700 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
           <div><div class="font-semibold text-gray-800 text-xs group-hover:text-blue-600">FM Monitor sur GitHub</div><div class="text-xs text-gray-400">Code source, issues</div></div>
         </a>
-        <a href="https://www.radio-browser.info" target="_blank"
+        <a href="https://github.com/LyonelB/rds-station-db" target="_blank"
            class="info-card flex items-center gap-3 hover:border-gray-300 transition group">
           <div class="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064"/></svg>
+            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
           </div>
-          <div><div class="font-semibold text-gray-800 text-xs group-hover:text-blue-600">Radio Browser</div><div class="text-xs text-gray-400">Base de données collaborative</div></div>
+          <div><div class="font-semibold text-gray-800 text-xs group-hover:text-blue-600">rds-station-db</div><div class="text-xs text-gray-400">Base de données stations FM</div></div>
         </a>
         <a href="https://www.rtl-sdr.com" target="_blank"
            class="info-card flex items-center gap-3 hover:border-gray-300 transition group">

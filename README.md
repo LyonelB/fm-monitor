@@ -1,6 +1,6 @@
 # 📻 FM Monitor
 
-![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20%7C%20Linux-lightgrey.svg)
@@ -31,7 +31,7 @@
 - **PS** (Programme Service) — nom de la station (8 car.)
 - **RT** (RadioText) — titre/artiste en cours (64 car.) — RT complet uniquement
 - **PI Code** — identifiant unique hexadécimal de la station
-- **Logo station** — récupération automatique via [Radio Browser](https://www.radio-browser.info)
+- **Logo station** — récupération automatique via [rds-station-db](https://github.com/LyonelB/rds-station-db) (codes PI RDS) et logos [tef.noobish.eu](https://tef.noobish.eu/logos/logo_preview.html)
 
 ### 🔊 Streaming Audio
 - **Serveur Icecast2** : streaming stable 24/7
@@ -49,7 +49,30 @@
 - Configuration complète via interface web
 - Statistiques et historique
 - Page documentation (FM, MPX, RDS, dongles)
-- Responsive — accessible depuis smartphone et tablette
+- **Responsive** — accessible depuis smartphone et tablette
+- **Mode public** `/public` — dashboard sans authentification
+- **Accès local** via `https://bl-fmo.local` (Nginx + mDNS)
+
+### 📡 Push Webhook
+- Envoi temps réel des données vers une URL externe (PHP, Node, etc.)
+- Payload JSON : signal, RDS, alertes, horodatage
+- Configurable depuis l'interface web
+
+---
+
+## 🐳 Installation Docker *(beta — non testé)*
+
+> ⚠️ Le support Docker est en version **beta** et n'a pas encore été testé en production. Retours bienvenus via les [issues GitHub](https://github.com/LyonelB/fm-monitor/issues).
+
+```bash
+git clone https://github.com/LyonelB/fm-monitor.git
+cd fm-monitor
+docker compose up -d
+```
+
+Accès : `https://localhost:5000`
+
+> Le dongle RTL-SDR doit être branché avant le démarrage du conteneur.
 
 ---
 
