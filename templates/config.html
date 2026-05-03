@@ -398,6 +398,46 @@
       </button>
     </div>
 
+    <!-- ── WEBHOOK ──────────────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-title">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Push Webhook
+      </div>
+      <div class="toggle-wrap mb-4">
+        <div>
+          <div class="text-sm font-medium text-gray-700">Activer le push webhook</div>
+          <div class="field-hint">Envoie les données en temps réel vers une URL externe</div>
+        </div>
+        <button id="webhook-toggle" onclick="toggleWebhook()" class="relative w-11 h-6 rounded-full transition-colors bg-gray-200" aria-checked="false">
+          <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <div class="field-label">URL du endpoint</div>
+          <input type="url" id="webhook-url" class="field-input" placeholder="https://ton-site.fr/receiver.php">
+        </div>
+        <div>
+          <div class="field-label">Intervalle (secondes)</div>
+          <select id="webhook-interval" class="field-input">
+            <option value="1">1 seconde</option>
+            <option value="5">5 secondes</option>
+            <option value="10">10 secondes</option>
+            <option value="30">30 secondes</option>
+            <option value="60">1 minute</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-hint mb-4">
+        Payload JSON envoyé : <code class="bg-gray-100 px-1 rounded text-xs">station, frequency, signal_db, signal_ok, ps, rt, pi, stereo, alert, timestamp</code>
+      </div>
+      <button onclick="saveWebhook()" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Sauvegarder
+      </button>
+    </div>
+
   </div>
 </main>
 
@@ -938,6 +978,48 @@
       document.getElementById('sidebar').classList.add('-translate-x-full');
       document.getElementById('sidebar-overlay').classList.add('hidden');
     }
-  </script>
+  
+    // ── Webhook ──────────────────────────────────────────────────
+    async function loadWebhook() {
+      const res = await fetch('/api/webhook', {credentials: 'include'});
+      const d = await res.json();
+      document.getElementById('webhook-url').value = d.url || '';
+      document.getElementById('webhook-interval').value = d.interval || 1;
+      setWebhookToggle(d.enabled || false);
+    }
+
+    function setWebhookToggle(enabled) {
+      const btn = document.getElementById('webhook-toggle');
+      btn.setAttribute('aria-checked', enabled);
+      btn.classList.toggle('bg-blue-500', enabled);
+      btn.classList.toggle('bg-gray-200', !enabled);
+      btn.querySelector('span').style.transform = enabled ? 'translateX(20px)' : '';
+    }
+
+    function toggleWebhook() {
+      const btn = document.getElementById('webhook-toggle');
+      const enabled = btn.getAttribute('aria-checked') !== 'true';
+      setWebhookToggle(enabled);
+    }
+
+    async function saveWebhook() {
+      const csrf = await getCSRFToken();
+      const payload = {
+        enabled:  document.getElementById('webhook-toggle').getAttribute('aria-checked') === 'true',
+        url:      document.getElementById('webhook-url').value.trim(),
+        interval: parseInt(document.getElementById('webhook-interval').value)
+      };
+      const res = await fetch('/api/webhook', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      const d = await res.json();
+      showToast(d.message || 'Webhook sauvegardé', d.status === 'ok' ? 'success' : 'error');
+    }
+
+    loadWebhook();
+</script>
 </body>
 </html>

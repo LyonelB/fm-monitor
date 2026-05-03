@@ -168,6 +168,10 @@ def get_csrf_token():
     """Retourne un token CSRF pour les requêtes AJAX"""
     return jsonify({'csrf_token': generate_csrf()})
 
+@app.route('/public')
+def public_dashboard():
+    return render_template('index.html', public_mode=True)
+
 @app.route('/')
 @auth.login_required
 def index():
@@ -440,7 +444,6 @@ def test_email():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/signal/history')
-@auth.login_required
 @limiter.exempt
 def get_signal_history():
     """Retourne les 60 dernières secondes de niveau RF"""
@@ -485,6 +488,25 @@ def get_alerts_history_grouped():
         return jsonify({'status': 'error', 'message': 'Database not available'}), 503
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/webhook', methods=['GET', 'POST'])
+@auth.login_required
+def webhook_settings():
+    if request.method == 'GET':
+        with open('config.json') as f:
+            cfg = json.load(f)
+        return jsonify(cfg.get('webhook', {}))
+    data = request.get_json()
+    with open('config.json') as f:
+        cfg = json.load(f)
+    cfg['webhook'] = {
+        'enabled': bool(data.get('enabled', False)),
+        'url':     data.get('url', ''),
+        'interval': int(data.get('interval', 1))
+    }
+    with open('config.json', 'w') as f:
+        json.dump(cfg, f, indent=2)
+    return jsonify({'status': 'ok', 'message': 'Webhook sauvegardé — redémarrez le service pour appliquer'})
 
 @app.route('/api/restart', methods=['POST'])
 @auth.login_required
@@ -844,7 +866,6 @@ def wifi_toggle():
 
 
 @app.route('/api/mpx/spectrum')
-@auth.login_required
 @limiter.exempt
 def mpx_spectrum():
     """Retourne le spectre FFT MPX pour affichage canvas"""

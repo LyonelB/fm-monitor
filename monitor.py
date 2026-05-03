@@ -291,6 +291,7 @@ class FMMonitor:
             logger.error(f"Erreur lors du démarrage: {e}")
             self.stop()
             raise
+        self._start_webhook()
 
     def _watchdog(self):
         """Thread de surveillance qui relance le processus maître si crash"""
@@ -1387,6 +1388,45 @@ class FMMonitor:
             return self.stream_queue.get(timeout=0.1)
         except queue.Empty:
             return None
+
+    def _start_webhook(self):
+        """Démarre le thread de push webhook si configuré."""
+        webhook_cfg = self.config.get('webhook', {})
+        logger.info(f"_start_webhook: cfg={webhook_cfg}")
+        if not webhook_cfg.get('enabled') or not webhook_cfg.get('url'):
+            logger.info("_start_webhook: désactivé ou URL manquante")
+            return
+        self._webhook_thread = threading.Thread(
+            target=self._webhook_loop, daemon=True, name='webhook-push'
+        )
+        self._webhook_thread.start()
+        logger.info(f"Webhook push démarré → {webhook_cfg['url']}")
+
+    def _webhook_loop(self):
+        """Pousse les stats vers l'URL webhook toutes les N secondes."""
+        import datetime
+        webhook_cfg = self.config.get('webhook', {})
+        url      = webhook_cfg.get('url', '')
+        interval = float(webhook_cfg.get('interval', 1))
+        while self.running:
+            try:
+                stats = self.get_stats()
+                payload = {
+                    'station':    stats.get('ps', '-'),
+                    'frequency':  stats.get('frequency', ''),
+                    'signal_db':  round(float(stats.get('current_level', -100)), 1),
+                    'signal_ok':  bool(stats.get('signal_ok', False)),
+                    'ps':         stats.get('ps', '-'),
+                    'rt':         stats.get('rt', '-'),
+                    'pi':         stats.get('pi', '-'),
+                    'stereo':     bool(stats.get('stereo_present', False)),
+                    'alert':      stats.get('last_alert'),
+                    'timestamp':  datetime.datetime.now().isoformat()
+                }
+                requests.post(url, json=payload, timeout=3)
+            except Exception as e:
+                logger.debug(f"Webhook push erreur: {e}")
+            time.sleep(interval)
 
     def get_stats(self):
         """Récupère les statistiques"""

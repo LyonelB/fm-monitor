@@ -61,14 +61,22 @@
 
   <!-- Navigation -->
   <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+    {% if public_mode %}
+    <a href="/login" class="sidebar-link" style="color:#2563eb">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Se connecter
+    </a>
+    {% else %}
     <a href="/" class="sidebar-link active">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
       Dashboard
     </a>
+    {% if not public_mode %}
     <a href="/config" class="sidebar-link">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
       Configuration
     </a>
+    {% endif %}
     <a href="/stats" class="sidebar-link">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       Statistiques
@@ -83,13 +91,16 @@
     </a>
   </nav>
 
+  {% endif %}
   <!-- Déconnexion -->
+  {% if not public_mode %}
   <div class="p-4 border-t border-gray-100">
     <a href="/logout" class="sidebar-link" style="color:#f87171" onmouseover="this.style.background='#fff1f2';this.style.color='#dc2626'" onmouseout="this.style.background='';this.style.color='#f87171'">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
       Déconnexion
     </a>
   </div>
+  {% endif %}
 </aside>
 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/30 z-40 hidden md:hidden" onclick="closeSidebar()"></div>
@@ -106,6 +117,7 @@
       <span class="text-xs text-gray-400 font-mono" id="frequency-display">—</span>
     </div>
     <div class="flex items-center gap-5">
+      {% if public_mode %}<span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">Vue publique</span>{% endif %}
       <div class="text-right">
         <div class="text-sm font-mono font-semibold text-gray-900" id="current-time">--:--:--</div>
         <div class="text-xs text-gray-400" id="current-date"></div>
@@ -227,10 +239,10 @@
           <!-- Player -->
           <!-- Player -->
           <div class="flex items-center gap-3">
-            <button id="rec-btn" onclick="toggleRecord()"
+            {% if not public_mode %}<button id="rec-btn" onclick="toggleRecord()"
               class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white hover:border-red-400 hover:text-red-500 transition flex items-center justify-center text-gray-400 flex-shrink-0">
               <span id="rec-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-gray-300"></span>
-            </button>
+            </button>{% endif %}
             <button id="play-button"
               class="w-9 h-9 rounded-full border-2 border-gray-200 bg-white hover:border-blue-500 hover:text-blue-600 transition flex items-center justify-center flex-shrink-0">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
