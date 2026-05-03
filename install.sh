@@ -258,6 +258,18 @@ else:
     print('  proxy stream déjà correct')
 " 2>/dev/null || true
 
+# Ajouter ProxyFix pour Nginx reverse proxy
+python3 -c "
+with open('app.py', 'r') as f:
+    content = f.read()
+if 'ProxyFix' not in content:
+    content = content.replace('app = Flask(__name__)', 'app = Flask(__name__)\n\nfrom werkzeug.middleware.proxy_fix import ProxyFix\napp.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)', 1)
+    open('app.py', 'w').write(content)
+    print('  ProxyFix ajouté')
+else:
+    print('  ProxyFix déjà présent')
+" 2>/dev/null || true
+
 # =============================================
 # 8. ENVIRONNEMENT VIRTUEL PYTHON
 # =============================================
