@@ -7,6 +7,8 @@
 
 **Système open source de monitoring de stations de radio FM** basé sur Raspberry Pi / Linux et RTL-SDR, avec streaming Icecast2, décodage RDS temps réel, alertes email et interface web moderne.
 
+<img width="1920" height="919" alt="image" src="https://github.com/user-attachments/assets/1eca93e9-b2fb-4998-87d2-c6e5bf16cc30" />
+
 ---
 
 ## ✨ Fonctionnalités
