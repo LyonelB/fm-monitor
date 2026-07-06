@@ -288,6 +288,10 @@ def save_config():
                 config['audio']['rds_timeout'] = int(data['audio']['rds_timeout'])
                 if monitor:
                     monitor.rds_timeout = int(data['audio']['rds_timeout'])
+            if 'rt_timeout' in data['audio']:
+                config['audio']['rt_timeout'] = int(data['audio']['rt_timeout'])
+                if monitor:
+                    monitor.rt_timeout = int(data['audio']['rt_timeout'])
 
         # Configuration email
         if 'email' in data:

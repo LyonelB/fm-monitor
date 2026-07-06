@@ -174,6 +174,11 @@
           <input type="number" id="rds-timeout" class="field-input" placeholder="120">
           <div class="field-hint">Durée sans signal RDS avant alerte</div>
         </div>
+        <div>
+          <div class="field-label">Délai alerte RadioText absent (s)</div>
+          <input type="number" id="rt-timeout" class="field-input" placeholder="300">
+          <div class="field-hint">Durée sans RadioText avant alerte</div>
+        </div>
       </div>
     </div>
 
@@ -521,6 +526,7 @@
       document.getElementById('modulation-std-threshold').value = config.audio?.modulation_std_threshold || 0.5;
       document.getElementById('signal-lost-threshold').value    = config.audio?.signal_lost_threshold || -50;
       document.getElementById('rds-timeout').value              = config.audio?.rds_timeout || 120;
+      document.getElementById('rt-timeout').value               = config.audio?.rt_timeout || 300;
       document.getElementById('sender-email').value             = config.email?.sender_email || '';
       document.getElementById('sender-password').value          = '';
       document.getElementById('recipient-emails').value         = recipientsStr;
@@ -613,7 +619,8 @@
         modulation_alert_delay:   parseInt(document.getElementById('modulation-alert-delay').value) || 30,
         modulation_std_threshold: parseFloat(document.getElementById('modulation-std-threshold').value) || 0.5,
         signal_lost_threshold:    parseFloat(document.getElementById('signal-lost-threshold').value) || -50,
-        rds_timeout:              parseInt(document.getElementById('rds-timeout').value) || 120
+        rds_timeout:              parseInt(document.getElementById('rds-timeout').value) || 120,
+        rt_timeout:               parseInt(document.getElementById('rt-timeout').value) || 300
       },
       email: {
         sender_email:     document.getElementById('sender-email').value,
