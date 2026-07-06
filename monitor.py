@@ -85,6 +85,9 @@ class FMMonitor:
             )
         else:
             self.signal_lost_threshold = float(self.audio_config.get('signal_lost_threshold', -50.0))
+            # Sans antenne, le niveau RF reste élevé (bruit) mais le SNR s'effondre
+            # (~1 dB au lieu de 25-40 dB). Le SNR est le seul indicateur fiable.
+            self.snr_lost_threshold = float(self.audio_config.get('snr_lost_threshold', 8.0))
             self.tef_modulation_threshold = -40.0
 
         # Surveillance RDS
@@ -771,7 +774,7 @@ class FMMonitor:
         try:
             # open() bloque naturellement jusqu'à ce que GNU Radio ouvre le write end
             fifo_in = open(RDS_FIFO, "rb")
-            rds_out  = open(rds_json, "wb", buffering=0)
+            rds_out  = open(rds_json, "w", encoding="utf-8", buffering=1)
             cmd = ["stdbuf", "-oL", "redsea", "-p", "-r", "171428"]
             logger.info("GNU Radio RDS : lancement redsea -r 171428")
             self.redsea_process = subprocess.Popen(
@@ -826,6 +829,7 @@ class FMMonitor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding='utf-8',
                 bufsize=1
             )
 
@@ -922,6 +926,7 @@ class FMMonitor:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding='utf-8',
                 bufsize=1
             )
 
@@ -981,7 +986,13 @@ class FMMonitor:
                 # par _on_tef_signal(). On surveille quand même pour les alertes.
                 if not self.use_tef:
                     # Seuil très bas : -50 dB par défaut → vrai crash émetteur
-                    signal_lost = current_level < self.signal_lost_threshold
+                    level_lost = current_level < self.signal_lost_threshold
+                    # SNR : sans antenne le niveau reste haut (bruit) mais le SNR chute
+                    snr_now = 99.0
+                    if self.mpx_enabled:
+                        snr_now = self.mpx_analyzer.get_results().get('snr', 99.0)
+                    snr_lost = snr_now < self.snr_lost_threshold
+                    signal_lost = level_lost or snr_lost
                 else:
                     signal_lost = not self.signal_ok
 
