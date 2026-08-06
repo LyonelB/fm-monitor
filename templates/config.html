@@ -39,7 +39,7 @@
 <body class="flex h-screen overflow-hidden bg-slate-50">
 
 <!-- ═══ SIDEBAR ═══ -->
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen transform -translate-x-full md:translate-x-0 md:relative transition-transform duration-300 ease-in-out">
+<aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen">
 
   <div class="p-5 border-b border-gray-100">
     <div class="flex items-center gap-3">
@@ -82,17 +82,11 @@
   </div>
 </aside>
 
-<div id="sidebar-overlay" class="fixed inset-0 bg-black/30 z-40 hidden md:hidden" onclick="closeSidebar()"></div>
 <!-- ═══ MAIN ═══ -->
 <main class="flex-1 overflow-y-auto">
 
   <header class="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-10">
-    <div class="flex items-center gap-2">
-      <button class="md:hidden text-gray-500 hover:text-gray-700 flex-shrink-0 mr-2" onclick="toggleSidebar()">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-      <h1 class="text-base font-semibold text-gray-900">Configuration</h1>
-    </div>
+    <h1 class="text-base font-semibold text-gray-900">Configuration</h1>
     <p class="text-xs text-gray-400 mt-0.5">Paramètres du monitoring FM</p>
   </header>
 
@@ -148,7 +142,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
         2. Surveillance &amp; Seuils
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-4">
         <div>
           <div class="field-label">Seuil modulation (dB std)</div>
           <input type="number" id="modulation-std-threshold" class="field-input" placeholder="0.5" step="0.1" min="0.1" max="5">
@@ -174,11 +168,6 @@
           <input type="number" id="rds-timeout" class="field-input" placeholder="120">
           <div class="field-hint">Durée sans signal RDS avant alerte</div>
         </div>
-        <div>
-          <div class="field-label">Délai alerte RadioText absent (s)</div>
-          <input type="number" id="rt-timeout" class="field-input" placeholder="300">
-          <div class="field-hint">Durée sans RadioText avant alerte</div>
-        </div>
       </div>
     </div>
 
@@ -188,7 +177,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         3. Alertes email (Gmail)
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-2 gap-4 mb-4">
         <div>
           <div class="field-label">Email expéditeur</div>
           <input type="email" id="sender-email" class="field-input" placeholder="votre.email@gmail.com">
@@ -211,6 +200,17 @@
           <input type="text" id="recipient-emails" class="field-input" placeholder="alerte1@exemple.com, alerte2@exemple.com">
           <div class="field-hint">Séparer par des virgules</div>
         </div>
+      </div>
+      <div class="toggle-wrap mb-4">
+        <div>
+          <div class="text-xs font-semibold text-gray-700">Alertes email actives</div>
+          <div class="text-xs text-gray-400 mt-0.5">Couper l'envoi des mails lors d'un arrêt programmé de l'émetteur</div>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="email-alerts-toggle" class="sr-only peer">
+          <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+          <span class="ml-2 text-xs font-medium text-gray-700" id="email-alerts-label">Chargement...</span>
+        </label>
       </div>
       <div class="flex items-center gap-3">
         <button type="button" onclick="sendTestEmail()" id="test-email-btn" class="btn-secondary">
@@ -240,7 +240,7 @@
       </div>
 
       <div id="static-ip-config" class="hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-2 gap-4 mb-4">
           <div>
             <div class="field-label">Adresse IP</div>
             <input type="text" id="ip-address" class="field-input" placeholder="192.168.1.100">
@@ -273,7 +273,7 @@
             <span class="ml-2 text-xs font-medium text-gray-700" id="wifi-toggle-label">Chargement...</span>
           </label>
         </div>
-        <div id="wifi-credentials" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="wifi-credentials" class="grid grid-cols-2 gap-4">
           <div>
             <div class="field-label">SSID (nom du réseau)</div>
             <input type="text" id="wifi-ssid" class="field-input" placeholder="MonReseauWiFi">
@@ -403,46 +403,6 @@
       </button>
     </div>
 
-    <!-- ── WEBHOOK ──────────────────────────────────────────────── -->
-    <div class="section">
-      <div class="section-title">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        Push Webhook
-      </div>
-      <div class="toggle-wrap mb-4">
-        <div>
-          <div class="text-sm font-medium text-gray-700">Activer le push webhook</div>
-          <div class="field-hint">Envoie les données en temps réel vers une URL externe</div>
-        </div>
-        <button id="webhook-toggle" onclick="toggleWebhook()" class="relative w-11 h-6 rounded-full transition-colors bg-gray-200" aria-checked="false">
-          <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
-        </button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div class="field-label">URL du endpoint</div>
-          <input type="url" id="webhook-url" class="field-input" placeholder="https://ton-site.fr/receiver.php">
-        </div>
-        <div>
-          <div class="field-label">Intervalle (secondes)</div>
-          <select id="webhook-interval" class="field-input">
-            <option value="1">1 seconde</option>
-            <option value="5">5 secondes</option>
-            <option value="10">10 secondes</option>
-            <option value="30">30 secondes</option>
-            <option value="60">1 minute</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-hint mb-4">
-        Payload JSON envoyé : <code class="bg-gray-100 px-1 rounded text-xs">station, frequency, signal_db, signal_ok, ps, rt, pi, stereo, alert, timestamp</code>
-      </div>
-      <button onclick="saveWebhook()" class="btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-        Sauvegarder
-      </button>
-    </div>
-
   </div>
 </main>
 
@@ -526,7 +486,6 @@
       document.getElementById('modulation-std-threshold').value = config.audio?.modulation_std_threshold || 0.5;
       document.getElementById('signal-lost-threshold').value    = config.audio?.signal_lost_threshold || -50;
       document.getElementById('rds-timeout').value              = config.audio?.rds_timeout || 120;
-      document.getElementById('rt-timeout').value               = config.audio?.rt_timeout || 300;
       document.getElementById('sender-email').value             = config.email?.sender_email || '';
       document.getElementById('sender-password').value          = '';
       document.getElementById('recipient-emails').value         = recipientsStr;
@@ -619,13 +578,13 @@
         modulation_alert_delay:   parseInt(document.getElementById('modulation-alert-delay').value) || 30,
         modulation_std_threshold: parseFloat(document.getElementById('modulation-std-threshold').value) || 0.5,
         signal_lost_threshold:    parseFloat(document.getElementById('signal-lost-threshold').value) || -50,
-        rds_timeout:              parseInt(document.getElementById('rds-timeout').value) || 120,
-        rt_timeout:               parseInt(document.getElementById('rt-timeout').value) || 300
+        rds_timeout:              parseInt(document.getElementById('rds-timeout').value) || 120
       },
       email: {
         sender_email:     document.getElementById('sender-email').value,
         sender_password:  document.getElementById('sender-password').value,
-        recipient_emails: document.getElementById('recipient-emails').value.split(',').map(e => e.trim())
+        recipient_emails: document.getElementById('recipient-emails').value.split(',').map(e => e.trim()),
+        alerts_enabled:   document.getElementById('email-alerts-toggle').checked
       },
       network: {
         mode:         isDHCP ? 'dhcp' : 'static',
@@ -871,6 +830,58 @@
     }
   });
 
+  // ═══════════════════════════════════════════════
+  // EMAIL ALERTS TOGGLE (live, sans redémarrage)
+  // ═══════════════════════════════════════════════
+  async function loadEmailAlertsStatus() {
+    try {
+      const resp = await fetch('/api/email-alerts/status', {credentials: 'include'});
+      const data = await resp.json();
+      const toggle = document.getElementById('email-alerts-toggle');
+      const label  = document.getElementById('email-alerts-label');
+      if (toggle && label) {
+        toggle.checked = data.enabled;
+        label.textContent = data.enabled ? 'Actives' : 'Coupées';
+      }
+    } catch(e) {
+      const label = document.getElementById('email-alerts-label');
+      if (label) label.textContent = 'Indisponible';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadEmailAlertsStatus();
+    const toggle = document.getElementById('email-alerts-toggle');
+    if (toggle) {
+      toggle.addEventListener('change', async () => {
+        const enable = toggle.checked;
+        const label  = document.getElementById('email-alerts-label');
+        try {
+          const csrfResp = await fetch('/api/csrf-token', {credentials: 'include'});
+          const { csrf_token } = await csrfResp.json();
+          const resp = await fetch('/api/email-alerts/toggle', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf_token},
+            body: JSON.stringify({enable})
+          });
+          const data = await resp.json();
+          if (data.status === 'success') {
+            label.textContent = enable ? 'Actives' : 'Coupées';
+            showToast('Alertes email ' + (enable ? 'activées' : 'coupées'), enable ? 'success' : 'warning');
+          } else {
+            toggle.checked = !enable;
+            label.textContent = !enable ? 'Actives' : 'Coupées';
+            showToast('Erreur alertes email : ' + data.message, 'error');
+          }
+        } catch(e) {
+          toggle.checked = !enable;
+          showToast('Erreur alertes email : ' + e.message, 'error');
+        }
+      });
+    }
+  });
+
   // INIT
   // ═══════════════════════════════════════════════
   loadConfig();
@@ -976,57 +987,6 @@
     }
   }
 
-
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('-translate-x-full');
-      document.getElementById('sidebar-overlay').classList.toggle('hidden');
-    }
-    function closeSidebar() {
-      document.getElementById('sidebar').classList.add('-translate-x-full');
-      document.getElementById('sidebar-overlay').classList.add('hidden');
-    }
-  
-    // ── Webhook ──────────────────────────────────────────────────
-    async function loadWebhook() {
-      const res = await fetch('/api/webhook', {credentials: 'include'});
-      const d = await res.json();
-      document.getElementById('webhook-url').value = d.url || '';
-      document.getElementById('webhook-interval').value = d.interval || 1;
-      setWebhookToggle(d.enabled || false);
-    }
-
-    function setWebhookToggle(enabled) {
-      const btn = document.getElementById('webhook-toggle');
-      btn.setAttribute('aria-checked', enabled);
-      btn.classList.toggle('bg-blue-500', enabled);
-      btn.classList.toggle('bg-gray-200', !enabled);
-      btn.querySelector('span').style.transform = enabled ? 'translateX(20px)' : '';
-    }
-
-    function toggleWebhook() {
-      const btn = document.getElementById('webhook-toggle');
-      const enabled = btn.getAttribute('aria-checked') !== 'true';
-      setWebhookToggle(enabled);
-    }
-
-    async function saveWebhook() {
-      const csrf = await getCSRFToken();
-      const payload = {
-        enabled:  document.getElementById('webhook-toggle').getAttribute('aria-checked') === 'true',
-        url:      document.getElementById('webhook-url').value.trim(),
-        interval: parseInt(document.getElementById('webhook-interval').value)
-      };
-      const res = await fetch('/api/webhook', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-      const d = await res.json();
-      showToast(d.message || 'Webhook sauvegardé', d.status === 'ok' ? 'success' : 'error');
-    }
-
-    loadWebhook();
 </script>
 </body>
 </html>

@@ -26,6 +26,9 @@ class EmailAlert:
         self.last_alert_time = None
         self.cooldown = timedelta(minutes=self.config.get('cooldown_minutes', 1))  # 1 minute par défaut
 
+        # Toggle "alertes actives" (live, piloté par l'UI, sans redémarrage)
+        self.alerts_enabled = self.config.get('alerts_enabled', True)
+
     def can_send_alert(self):
         """Vérifie si on peut envoyer une alerte (cooldown)"""
         if not self.config['enabled']:
@@ -44,6 +47,11 @@ class EmailAlert:
             details: Détails de l'alerte
             skip_cooldown: Si True, ignore le cooldown (pour les rétablissements)
         """
+        # Garde-fou toggle : couper les alertes automatiques quand désactivé
+        # (l'email de test, alert_type="Test", reste toujours autorisé)
+        if not getattr(self, 'alerts_enabled', True) and alert_type != "Test":
+            logger.info(f"Alerte '{alert_type}' non envoyée (alertes coupées via toggle)")
+            return False
         # Ignorer le cooldown si c'est un rétablissement OU si skip_cooldown=True
         if "rétabli" in alert_type.lower() or skip_cooldown:
             logger.info(f"Envoi de l'alerte '{alert_type}' (cooldown ignoré)")
@@ -143,6 +151,9 @@ Système de surveillance FM - RTL-SDR
 
     def send_recovery_alert(self):
         """Envoie une alerte de rétablissement du signal"""
+        if not getattr(self, 'alerts_enabled', True):
+            logger.info("Alerte de rétablissement non envoyée (alertes coupées via toggle)")
+            return False
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = f"✅ RÉTABLI - {self.station_name}"

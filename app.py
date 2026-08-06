@@ -307,6 +307,11 @@ def save_config():
                 if isinstance(emails, str):
                     emails = [e.strip() for e in emails.split(',') if e.strip()]
                 config['email']['recipient_emails'] = emails
+            if 'alerts_enabled' in data['email']:
+                enabled = bool(data['email']['alerts_enabled'])
+                config['email']['alerts_enabled'] = enabled
+                if monitor and getattr(monitor, 'email_alert', None):
+                    monitor.email_alert.alerts_enabled = enabled
 
         # Configuration des identifiants de connexion (avec Bcrypt)
         if 'auth' in data:
@@ -868,6 +873,38 @@ def wifi_toggle():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+@app.route('/api/email-alerts/status')
+@auth.login_required
+def email_alerts_status():
+    """Retourne l'etat des alertes email"""
+    try:
+        with open('config.json', 'r') as f:
+            enabled = json.load(f).get('email', {}).get('alerts_enabled', True)
+        return jsonify({'enabled': bool(enabled)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/email-alerts/toggle', methods=['POST'])
+@auth.login_required
+@csrf.exempt
+def email_alerts_toggle():
+    """Active ou coupe l'envoi des alertes email (live, sans redemarrage)"""
+    try:
+        data = request.get_json()
+        enable = bool(data.get('enable', True))
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        config.setdefault('email', {})['alerts_enabled'] = enable
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+        # Application immediate en memoire (pas de redemarrage)
+        if monitor and getattr(monitor, 'email_alert', None):
+            monitor.email_alert.alerts_enabled = enable
+        logger.info(f"Alertes email {'activees' if enable else 'coupees'}")
+        return jsonify({'status': 'success', 'enabled': enable})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/mpx/spectrum')
 @limiter.exempt
