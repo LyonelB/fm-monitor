@@ -772,9 +772,23 @@ def scan_dongle():
     import glob, serial as _serial
     result = {'tef': [], 'rtlsdr': False}
 
-    # Scan TEF sur ttyUSB* et ttyACM*
-    ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
-    for port in ports:
+    # Détection TEF Headless FMDX.org par VID:PID (déterministe).
+    # 1209:6687 = FMDX.org TEF668X Headless (firmware FM-DX-Tuner, port CDC-ACM).
+    import subprocess as _sp
+    fmdx_present = False
+    try:
+        _lsusb = _sp.run(['lsusb'], capture_output=True, text=True, timeout=5)
+        if '1209:6687' in (_lsusb.stdout + _lsusb.stderr):
+            fmdx_present = True
+    except Exception:
+        pass
+    # Associe le VID:PID à son /dev/ttyACM* (le firmware s'énumère en CDC-ACM).
+    acm_ports = sorted(glob.glob('/dev/ttyACM*'))
+    if fmdx_present:
+        result['tef'].extend(acm_ports if acm_ports else ['/dev/ttyACM0'])
+    # Fallback : probe série PE5PVB pour un TEF6686 CH340 sur ttyUSB* (ancien montage).
+    usb_ports = sorted(glob.glob('/dev/ttyUSB*'))
+    for port in usb_ports:
         try:
             s = _serial.Serial(port, 115200, timeout=2)
             s.reset_input_buffer()
@@ -786,6 +800,8 @@ def scan_dongle():
                 result['tef'].append(port)
         except Exception:
             pass
+    # Dédoublonnage en préservant l'ordre.
+    result['tef'] = list(dict.fromkeys(result['tef']))
 
     # Scan RTL-SDR
     try:
