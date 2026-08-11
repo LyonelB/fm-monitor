@@ -101,6 +101,11 @@ class FMMonitor:
         self.rt_last_seen = None
         self.rt_alert_sent = False
         self.rt_timeout = int(self.audio_config.get('rt_timeout', 300))  # 5 min par défaut
+        # Détection présence signal en mode TEF : débit de trames Ss.
+        # Le firmware n'émet des trames Ss que s'il capte un signal.
+        self.tef_ss_times = []  # horodatages des trames Ss (fenêtre glissante)
+        self.signal_frame_window = int(self.tef_config.get('signal_frame_window', 30))
+        self.signal_frame_min = int(self.tef_config.get('signal_frame_min', 5))
 
         # Système d'alertes
         self.email_alert = EmailAlert(config_path)
@@ -554,14 +559,12 @@ class FMMonitor:
         """Reçoit les métriques signal du TEF (~1/s)."""
         threshold  = self.tef_config.get('signal_threshold_dbf', 20.0)
         signal_ok  = dbf >= threshold
-        with self.stats_lock:
-            self.stats['current_level']    = dbf
-            self.stats['signal_dbf']       = dbf
-            self.stats['snr']              = snr
-            self.stats['multipath']        = multipath
-            self.stats['freq_offset']      = offset
-            self.stats['modulation_active'] = signal_ok
-        self.signal_ok = signal_ok
+        # Présence signal : on horodate chaque trame Ss (fenêtre glissante).
+        # C'est le vrai détecteur de présence (le dBf seul n'est pas fiable).
+        now = time.time()
+        self.tef_ss_times.append(now)
+        cutoff = now - self.signal_frame_window
+        self.tef_ss_times = [t for t in self.tef_ss_times if t >= cutoff]
         # Normalisation pour le VU-mètre du dashboard (qui attend -100..0 dBFS)
         # On mappe dBf (0..60) vers (-60..0) : valeur_display = dBf - 60
         with self.stats_lock:
@@ -571,6 +574,11 @@ class FMMonitor:
             self.stats['multipath']         = multipath
             self.stats['freq_offset']       = offset
             self.stats['modulation_active'] = signal_ok
+        # NOTE : en mode TEF, self.signal_ok n'est PLUS écrit ici. Il est
+        # piloté uniquement par le thread de surveillance (comptage de trames
+        # Ss), sinon le retour des trames court-circuitait la détection de
+        # rétablissement (recovery jamais envoyé). La variable locale
+        # signal_ok reste utilisée pour les stats/historique ci-dessous.
         if self.history_enabled and time.time() - self.last_db_save >= 5:
             try:
                 self.db_queue.put_nowait({'level': dbf, 'signal_ok': signal_ok})
@@ -994,7 +1002,13 @@ class FMMonitor:
                     snr_lost = snr_now < self.snr_lost_threshold
                     signal_lost = level_lost or snr_lost
                 else:
-                    signal_lost = not self.signal_ok
+                    # Mode TEF : présence signal = débit de trames Ss.
+                    # Le firmware n'émet des trames que s'il capte un signal ;
+                    # moins de signal_frame_min trames sur la fenêtre = perte.
+                    now = time.time()
+                    cutoff = now - self.signal_frame_window
+                    recent_ss = [t for t in self.tef_ss_times if t >= cutoff]
+                    signal_lost = len(recent_ss) < self.signal_frame_min
 
                 if signal_lost:
                     if self.signal_ok:
@@ -1004,10 +1018,24 @@ class FMMonitor:
                     else:
                         silence_duration = time.time() - self.silence_start_time
                         if silence_duration >= self.audio_config['silence_duration'] and not self.alert_sent:
-                            logger.error(f"Émetteur perdu depuis {silence_duration:.0f}s - ENVOI ALERTE")
+                            # Libellés selon le mode : le TEF mesure la réception
+                            # (débit de trames), pas l'émission → libellé distinct.
+                            if self.use_tef:
+                                _sig_type = "Signal FM non capté"
+                                _sig_detail = (
+                                    f"Aucune trame signal reçue du tuner depuis {int(silence_duration)}s.\n"
+                                    f"Le tuner ne capte plus de signal FM sur {self.stats.get('signal_dbf', 0):.1f} dBf.\n"
+                                    f"Causes possibles : réception/antenne du tuner, ou interruption de la diffusion."
+                                )
+                                _sig_msg = f"Signal FM non capté - {current_level:.2f} dB"
+                            else:
+                                _sig_type = "Émetteur FM hors ligne"
+                                _sig_detail = f"Aucune porteuse FM détectée.\nNiveau: {current_level:.2f} dB\nDurée: {int(silence_duration)}s"
+                                _sig_msg = f"Émetteur hors ligne - {current_level:.2f} dB"
+                            logger.error(f"{_sig_type} depuis {silence_duration:.0f}s - ENVOI ALERTE")
                             success = self.email_alert.send_alert(
-                                alert_type="Émetteur FM hors ligne",
-                                details=f"Aucune porteuse FM détectée.\nNiveau: {current_level:.2f} dB\nDurée: {int(silence_duration)}s",
+                                alert_type=_sig_type,
+                                details=_sig_detail,
                                 skip_cooldown=True
                             )
                             if success:
@@ -1019,7 +1047,7 @@ class FMMonitor:
                                     alert_type='signal_lost',
                                     level_db=current_level,
                                     duration_seconds=int(silence_duration),
-                                    message=f"Émetteur hors ligne - {current_level:.2f} dB",
+                                    message=_sig_msg,
                                     email_sent=True
                                 )
                 else:
@@ -1044,7 +1072,6 @@ class FMMonitor:
                     mpx_results = self.mpx_analyzer.get_results()
                     mpx_power = mpx_results.get('mpx_power', -100.0)
                     no_modulation = (
-                        self.signal_ok and
                         mpx_power < self.tef_modulation_threshold and
                         mpx_power > -100.0  # -100 = pas encore de données
                     )

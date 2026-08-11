@@ -88,7 +88,7 @@ Détails:
 {details}
 
 ---
-Système de surveillance FM - RTL-SDR
+BL-FMO Système de surveillance FM
             """
 
             html_content = f"""
@@ -118,7 +118,7 @@ Système de surveillance FM - RTL-SDR
                     <div class="info"><span class="label">Date et heure:</span> {timestamp}</div>
                     <hr>
                     <div class="info"><span class="label">Détails:</span><br>{details}</div>
-                    <div class="footer">Système de surveillance FM - RTL-SDR</div>
+                    <div class="footer">BL-FMO Système de surveillance FM</div>
                 </div>
             </body>
             </html>
@@ -173,7 +173,7 @@ Date et heure: {timestamp}
 Le signal FM a été rétabli avec succès.
 
 ---
-Système de surveillance FM - RTL-SDR
+BL-FMO Système de surveillance FM
             """
 
             html_content = f"""
@@ -202,7 +202,7 @@ Système de surveillance FM - RTL-SDR
                     <div class="info"><span class="label">Date et heure:</span> {timestamp}</div>
                     <hr>
                     <p>Le signal FM a été rétabli avec succès.</p>
-                    <div class="footer">Système de surveillance FM - RTL-SDR</div>
+                    <div class="footer">BL-FMO Système de surveillance FM</div>
                 </div>
             </body>
             </html>
