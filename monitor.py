@@ -1475,6 +1475,7 @@ class FMMonitor:
         stats['modulation_ok'] = self.modulation_ok
         stats['rds_ok'] = self.rds_ok
         stats['rds_ever_received'] = self.rds_ever_received
+        stats['use_tef'] = self.use_tef
         stats['frequency'] = self.rtl_config['frequency']
         stats['station_logo'] = self.stats.get('station_logo')
 
