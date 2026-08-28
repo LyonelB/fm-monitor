@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BL-FMO — Configuration initiale</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background:#f3f4f6; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .step { display:none; }
+  .step.active { display:block; animation: fade .25s ease; }
+  @keyframes fade { from {opacity:0; transform:translateY(6px);} to {opacity:1; transform:none;} }
+  .dot { width:9px; height:9px; border-radius:50%; background:#d1d5db; transition:all .2s; }
+  .dot.on { background:#2563eb; width:24px; border-radius:5px; }
+</style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+<div class="w-full max-w-lg">
+
+  <!-- En-tête -->
+  <div class="text-center mb-5">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white text-2xl font-bold mb-2">FM</div>
+    <h1 class="text-xl font-bold text-gray-800">Configuration de BL-FMO</h1>
+    <p class="text-sm text-gray-500">Quelques réglages pour démarrer votre surveillance</p>
+  </div>
+
+  <!-- Progression -->
+  <div class="flex items-center justify-center gap-1.5 mb-5">
+    <div class="dot on" data-dot="1"></div>
+    <div class="dot" data-dot="2"></div>
+    <div class="dot" data-dot="3"></div>
+    <div class="dot" data-dot="4"></div>
+    <div class="dot" data-dot="5"></div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+
+    <!-- ÉTAPE 1 : Bienvenue -->
+    <div class="step active" data-step="1">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">Bienvenue 👋</h2>
+      <p class="text-sm text-gray-600 leading-relaxed">
+        BL-FMO va surveiller la bonne diffusion de votre station FM.
+        Cet assistant configure votre récepteur, votre fréquence et,
+        si vous le souhaitez, les alertes par email.
+      </p>
+      <p class="text-xs text-gray-400 mt-3">Vous pourrez tout modifier plus tard dans les réglages.</p>
+    </div>
+
+    <!-- ÉTAPE 2 : Récepteur -->
+    <div class="step" data-step="2">
+      <h2 class="text-lg font-semibold text-gray-800 mb-1">Votre récepteur</h2>
+      <p class="text-sm text-gray-600 mb-3">Branchez votre dongle, puis lancez la détection.</p>
+
+      <button id="scanBtn" onclick="scanDongles()"
+        class="w-full py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition">
+        Détecter les récepteurs
+      </button>
+
+      <div id="scanResult" class="mt-4 space-y-2"></div>
+      <p id="scanHint" class="text-xs text-gray-400 mt-3 hidden">
+        Aucun récepteur détecté — vous pouvez continuer et le brancher plus tard,
+        ou vérifier le branchement puis relancer la détection.
+      </p>
+    </div>
+
+    <!-- ÉTAPE 3 : Fréquence + station -->
+    <div class="step" data-step="3">
+      <h2 class="text-lg font-semibold text-gray-800 mb-1">Votre station</h2>
+      <p class="text-sm text-gray-600 mb-4">La fréquence FM à surveiller et le nom de la station.</p>
+
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Nom de la station</label>
+      <input id="stationName" type="text" placeholder="Ma Radio FM"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Fréquence (MHz)</label>
+      <div class="flex items-center gap-2">
+        <input id="freq" type="number" step="0.1" min="87.5" max="108" placeholder="88.6"
+          class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        <span class="text-sm text-gray-500 font-mono">MHz</span>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">Entre 87.5 et 108 MHz.</p>
+    </div>
+
+    <!-- ÉTAPE 4 : Emails -->
+    <div class="step" data-step="4">
+      <h2 class="text-lg font-semibold text-gray-800 mb-1">Alertes par email</h2>
+      <p class="text-sm text-gray-600 mb-4">Recevez un email en cas de coupure de diffusion.</p>
+
+      <label class="flex items-center gap-2 mb-4 cursor-pointer">
+        <input id="emailEnabled" type="checkbox" onchange="toggleEmail()" class="w-4 h-4 accent-blue-600">
+        <span class="text-sm font-medium text-gray-700">Activer les alertes email</span>
+      </label>
+
+      <div id="emailFields" class="space-y-3 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Email expéditeur</label>
+          <input id="senderEmail" type="email" placeholder="alertes@exemple.fr"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Mot de passe d'application</label>
+          <input id="senderPassword" type="password" placeholder="xxxx xxxx xxxx xxxx"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          <p class="text-xs text-gray-400 mt-1">
+            Pour Gmail : créez un « mot de passe d'application » dans les paramètres
+            de sécurité de votre compte Google (pas votre mot de passe habituel).
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Serveur SMTP</label>
+            <input id="smtpServer" type="text" value="smtp.gmail.com"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="w-24">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Port</label>
+            <input id="smtpPort" type="number" value="587"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Destinataires (séparés par des virgules)</label>
+          <input id="recipients" type="text" placeholder="direction@exemple.fr, technique@exemple.fr"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 5 : Récap -->
+    <div class="step" data-step="5">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">Récapitulatif</h2>
+      <div id="summary" class="space-y-2 text-sm"></div>
+      <div id="saveError" class="hidden mt-3 text-sm text-red-600"></div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+      <button id="prevBtn" onclick="prevStep()"
+        class="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 transition invisible">← Précédent</button>
+      <button id="nextBtn" onclick="nextStep()"
+        class="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition">Suivant →</button>
+    </div>
+
+  </div>
+  <p class="text-center text-xs text-gray-400 mt-4">BL-FMO — Système de surveillance FM</p>
+</div>
+
+<script>
+let current = 1;
+const TOTAL = 5;
+let chosenSource = null;   // 'tef' | 'rtlsdr'
+let chosenPort = null;
+
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i < n));
+  document.getElementById('prevBtn').classList.toggle('invisible', n === 1);
+  const next = document.getElementById('nextBtn');
+  next.textContent = (n === TOTAL) ? 'Terminer ' : 'Suivant >';
+  if (n === 5) buildSummary();
+  current = n;
+}
+
+function nextStep() {
+  if (current === TOTAL) { finish(); return; }
+  if (current === 3 && !validateFreq()) return;
+  showStep(current + 1);
+}
+function prevStep() { if (current > 1) showStep(current - 1); }
+
+function validateFreq() {
+  const f = parseFloat(document.getElementById('freq').value);
+  if (isNaN(f) || f < 87.5 || f > 108) {
+    alert("Frequence invalide : indiquez une valeur entre 87.5 et 108 MHz.");
+    return false;
+  }
+  return true;
+}
+
+async function scanDongles() {
+  const btn = document.getElementById('scanBtn');
+  const box = document.getElementById('scanResult');
+  btn.textContent = 'Detection en cours...'; btn.disabled = true;
+  box.innerHTML = '';
+  try {
+    const r = await fetch('/api/scan-dongle', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const d = await r.json();
+    const options = [];
+    if (d.tef && d.tef.length) options.push({ id:'tef', label:'TEF Lite SE (audio haute qualite)', port:d.tef[0] });
+    if (d.rtlsdr) options.push({ id:'rtlsdr', label:'RTL-SDR (donnees MPX detaillees)', port:null });
+
+    if (!options.length) {
+      document.getElementById('scanHint').classList.remove('hidden');
+    } else {
+      document.getElementById('scanHint').classList.add('hidden');
+      options.forEach(o => {
+        const div = document.createElement('label');
+        div.className = 'flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-blue-50';
+        div.innerHTML = `<input type="radio" name="src" value="${o.id}" class="accent-blue-600">
+          <span class="text-sm font-medium text-gray-700">${o.label}</span>`;
+        div.querySelector('input').addEventListener('change', () => { chosenSource = o.id; chosenPort = o.port; });
+        box.appendChild(div);
+      });
+      // Auto-selection si un seul dongle
+      if (options.length === 1) {
+        box.querySelector('input').checked = true;
+        chosenSource = options[0].id; chosenPort = options[0].port;
+      }
+    }
+  } catch(e) {
+    box.innerHTML = '<p class="text-sm text-red-600">Erreur lors de la detection.</p>';
+  }
+  btn.textContent = 'Relancer la detection'; btn.disabled = false;
+}
+
+function toggleEmail() {
+  document.getElementById('emailFields').classList.toggle('hidden', !document.getElementById('emailEnabled').checked);
+}
+
+function buildSummary() {
+  const s = document.getElementById('summary');
+  const srcLabel = chosenSource === 'tef' ? 'TEF Lite SE' : (chosenSource === 'rtlsdr' ? 'RTL-SDR' : 'Non defini (a brancher plus tard)');
+  const emailOn = document.getElementById('emailEnabled').checked;
+  const row = (k,v) => `<div class="flex justify-between"><span class="text-gray-500">${k}</span><span class="font-medium text-gray-800">${v}</span></div>`;
+  s.innerHTML =
+    row('Recepteur', srcLabel) +
+    row('Station', document.getElementById('stationName').value || 'Ma Radio FM') +
+    row('Frequence', (document.getElementById('freq').value || '88.6') + ' MHz') +
+    row('Alertes email', emailOn ? 'Activees' : 'Desactivees');
+}
+
+async function finish() {
+  const btn = document.getElementById('nextBtn');
+  const errBox = document.getElementById('saveError');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  errBox.classList.add('hidden');
+
+  const freq = (document.getElementById('freq').value || '88.6');
+  const freqM = freq + 'M';
+
+  // 1) Source (si choisie) via l'API dediee (ecrit tef.enabled + redemarre)
+  try {
+    if (chosenSource) {
+      await fetch('/api/select-source', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ source: chosenSource === 'rtlsdr' ? 'gnuradio' : 'tef', port: chosenPort || '/dev/ttyACM0' })
+      });
+    }
+
+    // 2) Station + frequence + email + flag setup termine
+    const payload = {
+      station: { name: document.getElementById('stationName').value || 'Ma Radio FM', frequency: freqM },
+      rtl_sdr: { frequency: freqM },
+      setup: { completed: true }
+    };
+    if (document.getElementById('emailEnabled').checked) {
+      payload.email = {
+        sender_email: document.getElementById('senderEmail').value,
+        sender_password: document.getElementById('senderPassword').value,
+        smtp_server: document.getElementById('smtpServer').value,
+        smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
+        recipient_emails: document.getElementById('recipients').value,
+        alerts_enabled: true
+      };
+    } else {
+      payload.email = { alerts_enabled: false };
+    }
+
+    const r = await fetch('/api/config/save', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      window.location.href = '/';
+    } else {
+      throw new Error(d.message || "Echec de l enregistrement");
+    }
+  } catch(e) {
+    errBox.textContent = 'Erreur : ' + e.message;
+    errBox.classList.remove('hidden');
+    btn.textContent = 'Terminer '; btn.disabled = false;
+  }
+}
+
+showStep(1);
+</script>
+</body>
+</html>
