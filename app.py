@@ -362,6 +362,14 @@ def save_config():
 
         logger.info("Configuration sauvegardée avec succès")
 
+        # Recharger à chaud le nom de station / fréquence affichés et les identifiants
+        # SMTP utilisés par les emails d'alerte. EmailAlert ne les lit qu'une fois au
+        # démarrage du service : sans ce rechargement, changer le nom de station ou la
+        # fréquence dans ce formulaire laisse les emails d'alerte utiliser les anciennes
+        # valeurs tant que le service fm-monitor n'est pas redémarré.
+        if ('station' in data or 'email' in data) and monitor and getattr(monitor, 'email_alert', None):
+            monitor.email_alert.reload_config()
+
         # Redémarrer le monitoring si la fréquence ou le gain a changé
         needs_restart = ('rtl_sdr' in data and
                         ('frequency' in data['rtl_sdr'] or 'gain' in data['rtl_sdr']))

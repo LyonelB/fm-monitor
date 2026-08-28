@@ -29,6 +29,22 @@ class EmailAlert:
         # Toggle "alertes actives" (live, piloté par l'UI, sans redémarrage)
         self.alerts_enabled = self.config.get('alerts_enabled', True)
 
+    def reload_config(self, config_path='config.json'):
+        """Recharge la config email/station depuis le disque (à chaud, sans redémarrer le service).
+
+        À appeler après chaque sauvegarde de config.json qui touche 'email' ou 'station',
+        sinon les emails d'alerte continuent d'utiliser le nom/fréquence de station et les
+        identifiants SMTP chargés au démarrage du processus.
+        """
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        self.config = config['email']
+        self.station_name = config['station']['name']
+        self.frequency = config['station']['frequency_display']
+        self.cooldown = timedelta(minutes=self.config.get('cooldown_minutes', 1))
+        self.alerts_enabled = self.config.get('alerts_enabled', True)
+
     def can_send_alert(self):
         """Vérifie si on peut envoyer une alerte (cooldown)"""
         if not self.config['enabled']:
