@@ -270,15 +270,15 @@ class TEFDriver:
         cmd  = line[0]
         data = line[1:]
 
-        if cmd == 'S' and data.startswith('s'):
-            # Ss<dBf>,<SNR>,<multipath>,<offset>
+        if cmd == 'S' and data[:1] in ('s', 'm'):
+            # Ss ou Sm <dBf>,<SNR>,<multipath>,<offset>
             parts = data[1:].split(',')
             if len(parts) >= 2 and self.on_signal:
                 try:
                     dbf      = float(parts[0])
-                    snr      = int(parts[1])
-                    mpath    = int(parts[2]) if len(parts) > 2 else 0
-                    offset   = int(parts[3]) if len(parts) > 3 else 0
+                    snr      = float(parts[1])
+                    mpath    = float(parts[2]) if len(parts) > 2 else 0
+                    offset   = float(parts[3]) if len(parts) > 3 else 0
                     self.on_signal(dbf, snr, mpath, offset)
                 except (ValueError, IndexError):
                     pass
