@@ -220,7 +220,7 @@
             <div id="vu-meter-bar-main" class="vu-bar w-0" style="background:#10b981; height:100%"></div>
           </div>
           <div class="flex justify-between text-xs text-gray-400 font-mono mb-1">
-            <span>0</span><span>15</span><span>30</span><span>45</span><span>60 dBf</span>
+            <span>0</span><span>22</span><span>45</span><span>67</span><span>90 dBf</span>
           </div>
           <!-- SNR + Multipath en ligne sous la barre -->
           <!-- Spectre MPX (masqué en mode TEF) -->
@@ -446,7 +446,7 @@
         let pct, label;
         if (dbf !== undefined && dbf !== null) {
             // Mode TEF — jauge 0..60 dBf
-            pct   = Math.max(0, Math.min(100, (dbf / 60) * 100));
+            pct   = Math.max(0, Math.min(100, (dbf / 90) * 100));
             label = dbf.toFixed(1) + ' dBf';
         } else {
             // Mode RTL-SDR — jauge -100..0 dBFS
@@ -693,7 +693,7 @@
                 const center = (dMin + dMax) / 2;
                 const halfRange = Math.max(1, (dMax - dMin) / 2 + 1);
                 audioChart.options.scales.y.min = Math.max(0,  Math.floor((center - halfRange) * 10) / 10);
-                audioChart.options.scales.y.max = Math.min(60, Math.ceil( (center + halfRange) * 10) / 10);
+                audioChart.options.scales.y.max = Math.min(90, Math.ceil( (center + halfRange) * 10) / 10);
             } else {
                 const dMin = Math.min(...values), dMax = Math.max(...values), margin = 5;
                 audioChart.options.scales.y.min = Math.floor((dMin - margin) / 10) * 10;
