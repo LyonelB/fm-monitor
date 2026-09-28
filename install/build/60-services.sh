@@ -28,6 +28,12 @@ INSTALL_DIR="${INSTALL_DIR:-$BLFMO_HOME/fm-monitor}"
 # Dossier de firstboot.sh à installer : passé par build.sh, sinon à côté d'ici.
 SRC_DIR="${SRC_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
+# ─── 0. Droits réseau : sudo nmcli sans mot de passe (WiFi + IP fixe/DHCP) ──
+log "Règle sudoers nmcli pour $BLFMO_USER…"
+echo "$BLFMO_USER ALL=(root) NOPASSWD: /usr/bin/nmcli" > /etc/sudoers.d/fm-monitor-nmcli
+chmod 440 /etc/sudoers.d/fm-monitor-nmcli
+visudo -cf /etc/sudoers.d/fm-monitor-nmcli >/dev/null && ok "sudoers nmcli" || { err "sudoers invalide"; rm -f /etc/sudoers.d/fm-monitor-nmcli; exit 1; }
+
 # ─── 1. Service systemd de l'application (activé, pas démarré) ─────────────
 log "Installation du service fm-monitor…"
 tee /etc/systemd/system/fm-monitor.service > /dev/null <<EOF

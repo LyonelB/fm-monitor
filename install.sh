@@ -410,6 +410,11 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+# Droits réseau : sudo nmcli sans mot de passe (WiFi + IP fixe/DHCP depuis l'UI)
+echo "$USER ALL=(root) NOPASSWD: /usr/bin/nmcli" | sudo tee /etc/sudoers.d/fm-monitor-nmcli > /dev/null
+sudo chmod 440 /etc/sudoers.d/fm-monitor-nmcli
+sudo visudo -cf /etc/sudoers.d/fm-monitor-nmcli > /dev/null || sudo rm -f /etc/sudoers.d/fm-monitor-nmcli
+
 sudo systemctl daemon-reload
 sudo systemctl enable fm-monitor
 print_info "Service systemd configuré"

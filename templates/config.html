@@ -620,6 +620,19 @@
       const result = await resp.json();
 
       if (result.status === 'success') {
+        const net = result.network;
+        if (net && net.changed) {
+          label.textContent = 'Changement réseau…';
+          if (net.method === 'manual' && net.new_ip) {
+            const port   = location.port ? ':' + location.port : '';
+            const newUrl = location.protocol + '//' + net.new_ip + port + location.pathname;
+            showToast('IP fixe ' + net.new_ip + ' en cours d\'application. Redirection dans 15 s. En cas d\'échec, retour automatique à l\'ancienne adresse.', 'info');
+            setTimeout(() => { window.location.href = newUrl; }, 15000);
+          } else {
+            showToast('Passage en DHCP en cours. La nouvelle adresse est attribuée par la box : reconnectez-vous via le nom .local ou l\'IP indiquée par le routeur.', 'info');
+          }
+          return;
+        }
         label.textContent = 'Redémarrage…';
         showToast('Configuration enregistrée — redémarrage du monitoring…', 'info');
 

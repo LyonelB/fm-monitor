@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from monitor import FMMonitor
 from auth import Auth
+import network_config
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -365,6 +366,11 @@ def save_config():
                 config['network'] = {}
 
             network_data = data['network']
+            # Valider AVANT d'écrire quoi que ce soit (400 si saisie invalide)
+            try:
+                network_config.validate(network_data)
+            except network_config.NetworkConfigError as e:
+                return jsonify({'status': 'error', 'message': f'Réseau : {e}'}), 400
             config['network']['mode'] = network_data.get('mode', 'dhcp')
             config['network']['ip'] = network_data.get('ip', '')
             config['network']['netmask'] = network_data.get('netmask', '')
@@ -436,34 +442,20 @@ def save_config():
                 monitor.use_tef = config['tef'].get('enabled', False)
             monitor.start()
 
-        # Appliquer la configuration réseau si elle a été modifiée
+        # Appliquer la configuration réseau (NetworkManager) si elle diffère de l'état actuel
+        network_result = None
         if 'network' in data:
             try:
-                import os
-                script_path = os.path.join(os.path.dirname(__file__), 'apply_network.sh')
-
-                logger.info(f"Application de la configuration réseau via {script_path}")
-
-                result = subprocess.run(
-                    ['sudo', script_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-
-                if result.returncode == 0:
-                    logger.info("Configuration réseau appliquée avec succès")
-                    logger.info(result.stdout)
-                else:
-                    logger.error(f"Erreur lors de l'application de la config réseau: {result.stderr}")
-                    # Ne pas faire échouer la sauvegarde si l'application réseau échoue
-
-            except subprocess.TimeoutExpired:
-                logger.error("Timeout lors de l'application de la configuration réseau (30s)")
+                network_result = network_config.schedule_apply(data['network'])
+                if network_result.get('changed'):
+                    logger.info(f"Changement réseau planifié : {network_result}")
             except Exception as e:
-                logger.error(f"Erreur lors de l'application de la config réseau: {str(e)}")
+                logger.error(f"Configuration réseau non appliquée : {e}")
+                return jsonify({'status': 'error',
+                                'message': f'Configuration enregistrée mais réseau non appliqué : {e}'}), 500
 
-        return jsonify({'status': 'success', 'message': 'Configuration enregistrée'})
+        return jsonify({'status': 'success', 'message': 'Configuration enregistrée',
+                        'network': network_result})
 
     except Exception as e:
         logger.error(f"Erreur lors de la sauvegarde de la config: {e}")
